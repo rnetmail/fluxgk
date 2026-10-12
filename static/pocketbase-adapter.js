@@ -101,7 +101,7 @@
     _ready = loadSdk().then(function (PB) {
       pb = new PB(PB_URL || window.location.origin);
       if (pb.authStore.isValid) {
-        return pb.collection('users').authRefresh()
+        return pb.collection('users').authRefresh({ requestKey: null })
           .then(function () { return pb; })
           .catch(function () { pb.authStore.clear(); return pb; });
       }
@@ -158,7 +158,11 @@
   function fetchRelated(path) {
     return ready().then(function () {
       if (!uid()) return [];
-      return pb.collection(NODES).getFullList({ batch: 500, filter: filterFor(path) });
+      /* requestKey:null desliga o AUTOCANCELAMENTO do SDK. Sem isto, duas
+         leituras concorrentes com a mesma assinatura se cancelam entre si — e
+         as páginas ligam vários on('value') de uma vez, o que deixaria a tela
+         vazia com um erro só no console. Capturado pelo teste de fumaça. */
+      return pb.collection(NODES).getFullList({ batch: 500, filter: filterFor(path), requestKey: null });
     }).then(function (recs) {
       var p = clean(path);
       return recs.filter(function (r) {
@@ -224,24 +228,24 @@
         else if (isDesc(rp, p)) desc.push(r);
       });
 
-      var jobs = desc.map(function (r) { return pb.collection(NODES).delete(r.id); });
+      var jobs = desc.map(function (r) { return pb.collection(NODES).delete(r.id, { requestKey: null }); });
 
       /* o valor vive dentro de um ancestral: edita o JSON do ancestral */
       if (anc && !exact) {
         var base = clone(unwrap(anc));
         if (base === null || typeof base !== 'object') base = {};
         deepSet(base, parts(p).slice(parts(anc.path).length), value === undefined ? null : value);
-        jobs.push(pb.collection(NODES).update(anc.id, { data: { v: base } }));
+        jobs.push(pb.collection(NODES).update(anc.id, { data: { v: base } }, { requestKey: null }));
         return Promise.all(jobs);
       }
 
       if (value === null || value === undefined) {
-        if (exact) jobs.push(pb.collection(NODES).delete(exact.id));
+        if (exact) jobs.push(pb.collection(NODES).delete(exact.id, { requestKey: null }));
         return Promise.all(jobs);
       }
 
-      if (exact) jobs.push(pb.collection(NODES).update(exact.id, { data: { v: value } }));
-      else jobs.push(pb.collection(NODES).create({ owner: uid(), path: p, data: { v: value } }));
+      if (exact) jobs.push(pb.collection(NODES).update(exact.id, { data: { v: value } }, { requestKey: null }));
+      else jobs.push(pb.collection(NODES).create({ owner: uid(), path: p, data: { v: value } }, { requestKey: null }));
       return Promise.all(jobs);
     }).then(function () { notify(p); return null; });
   }
@@ -287,6 +291,11 @@
 
   function emit(L) {
     readPath(L.path).then(function (snap) {
+      /* emit é assíncrono: entre o aviso e a volta da leitura a página pode ter
+         chamado off('value', h). O Firebase NUNCA chama o callback depois do
+         off, então quem saiu da lista não é mais avisado. Capturado pelo teste
+         de fumaça (um aviso em voo passava pelo off e chegava atrasado). */
+      if (listeners.indexOf(L) < 0) return;
       try { L.cb(snap); } catch (e) { console.error('[fluxdb] listener falhou:', e); }
     }).catch(function (e) { console.warn('[fluxdb] leitura falhou em', L.path, e && e.message); });
   }
@@ -437,7 +446,7 @@
 
     signInWithEmailAndPassword: function (email, password) {
       return ready().then(function () {
-        return pb.collection('users').authWithPassword(String(email).trim(), String(password));
+        return pb.collection('users').authWithPassword(String(email).trim(), String(password), { requestKey: null });
       }).then(function () {
         subscribed = false;
         return ensureSubscription();
@@ -451,7 +460,7 @@
       return ready().then(function () {
         var data = { email: String(email).trim(), password: String(password), passwordConfirm: String(password) };
         if (extra) for (var k in extra) data[k] = extra[k];
-        return pb.collection('users').create(data);
+        return pb.collection('users').create(data, { requestKey: null });
       }).then(function () {
         return authApi.signInWithEmailAndPassword(email, password);
       }).catch(function (e) { throw mapAuthError(e); });
