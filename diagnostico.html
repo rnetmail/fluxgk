@@ -41,7 +41,7 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f4f4f2;
 <div class="wrap">
 
 <h1>Diagnóstico de dados locais</h1>
-<p class="sub">Mostra o que o FluxGK guardou <b>neste navegador</b>. Não mexe no Firebase.</p>
+<p class="sub">Mostra o que o FluxGK guardou <b>neste navegador</b>. Não mexe no PocketBase.</p>
 
 <div class="warn">
 <b>Importante:</b> esta página só enxerga o navegador em que ela está aberta, e só se
@@ -52,15 +52,15 @@ se usa pela pasta, abra este arquivo pela pasta.
 
 <div id="app"></div>
 
-<h2>E os dados do Firebase?</h2>
+<h2>E os dados do PocketBase?</h2>
 <div class="box">
 São outra coisa, e esta página <b>não</b> os alcança. Ficam em
 <code>users/{seu-uid}/data/{clube}/{temporada}/</code> e você os vê no
-<b>Console do Firebase → Realtime Database → Dados</b>.<br><br>
+<b>painel do PocketBase (/_/) → Collections → nodes</b>, pelo campo <code>path</code>.<br><br>
 A diferença prática: apagar o cache local aqui <b>não apaga nada de verdade</b> — na próxima
-abertura o sistema baixa tudo do Firebase de novo. Já apagar no Console do Firebase é
+abertura o sistema baixa tudo do PocketBase de novo. Já apagar no painel do PocketBase é
 definitivo.<br><br>
-<b>Se um dado sumiu do Firebase mas continua aparecendo na tela</b>, é cache local: limpe aqui.<br>
+<b>Se um dado sumiu do PocketBase mas continua aparecendo na tela</b>, é cache local: limpe aqui.<br>
 <b>Se aparece em dois clubes diferentes</b>, é cache antigo de antes do isolamento por clube:
 limpe os itens marcados como legado.
 </div>
@@ -71,7 +71,7 @@ limpe os itens marcados como legado.
 /* ── catalogo: o que cada chave e ──────────────────────────── */
 var CATALOGO = [
   {re:/^fluxgk_lang$/,                cat:'uso',    d:'Idioma escolhido no hub (EN/PT).'},
-  {re:/^glc_users\//,                 cat:'uso',    d:'Cache do Controle de Carga — isolado por clube e temporada. É recriado a partir do Firebase.'},
+  {re:/^glc_users\//,                 cat:'uso',    d:'Cache do Controle de Carga — isolado por clube e temporada. É recriado a partir do PocketBase.'},
   {re:/^fluxgk_sessions$/,            cat:'uso',    d:'Sessões do Planner guardadas no navegador.'},
   {re:/^fluxgk_exercises$/,           cat:'uso',    d:'Biblioteca de exercícios do Planner.'},
   {re:/^fluxgk_settings$/,            cat:'uso',    d:'Identidade do clube no Planner (hoje vem do hub; guardado só como cópia).'},
@@ -87,7 +87,7 @@ var CATALOGO = [
   {re:/^glcv5_migrated$/,             cat:'legado', d:'Marcador de que a migração acima já ocorreu. Apagar faz a migração tentar de novo — não recomendado apagar sozinho.'},
   {re:/^glc_(?!users\/)/,             cat:'legado', d:'⚠ Cache do Controle de Carga ANTES do isolamento por clube. É a causa clássica de dado aparecendo em dois clubes. Pode apagar.'},
   {re:/^_disabled_/,                  cat:'legado', d:'Chave desativada por uma versão anterior. Pode apagar.'},
-  {re:/^fxg_fb$/,                     cat:'legado', d:'Configuração manual de Firebase do xG. Hoje a config vem do hub. Pode apagar.'}
+  {re:/^fxg_fb$/,                     cat:'legado', d:'Configuração manual de PocketBase do xG. Hoje a config vem do hub. Pode apagar.'}
 ];
 
 function classificar(k){
@@ -111,7 +111,7 @@ function render(){
   }
   var html = '';
   var titulos = {
-    uso:    ['Em uso','t-uso',  'Estes o sistema usa hoje. Apagar não perde nada do Firebase — só força o sistema a baixar tudo de novo na próxima abertura.'],
+    uso:    ['Em uso','t-uso',  'Estes o sistema usa hoje. Apagar não perde nada do PocketBase — só força o sistema a baixar tudo de novo na próxima abertura.'],
     legado: ['Legado','t-legado','Restos de versões anteriores. São a fonte mais comum de dado fantasma. Pode apagar com segurança.'],
     outro:  ['Não catalogado','t-outro','Chaves do FluxGK que não reconheço. Vale me mostrar antes de apagar.']
   };
@@ -143,8 +143,8 @@ function limpar(cat){
   }
   if (!alvo.length) return;
   var msg = cat === 'legado'
-    ? 'Apagar '+alvo.length+' item(ns) de versões antigas?\n\nIsso não afeta o Firebase.'
-    : 'Apagar '+alvo.length+' item(ns) de cache em uso?\n\nNada é perdido no Firebase — o sistema baixa tudo de novo na próxima abertura.\n\nAtenção: o que estiver SÓ no navegador e ainda não sincronizado será perdido.';
+    ? 'Apagar '+alvo.length+' item(ns) de versões antigas?\n\nIsso não afeta o PocketBase.'
+    : 'Apagar '+alvo.length+' item(ns) de cache em uso?\n\nNada é perdido no PocketBase — o sistema baixa tudo de novo na próxima abertura.\n\nAtenção: o que estiver SÓ no navegador e ainda não sincronizado será perdido.';
   if (!confirm(msg)) return;
   alvo.forEach(function(k){ localStorage.removeItem(k); });
   render();

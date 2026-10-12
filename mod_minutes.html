@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FluxGK — GK Minutes</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (function(){
@@ -19,7 +18,7 @@
     var d=e.data;
     if(!d||d.type!=='FLUXGK_CONTEXT')return;
     if(window.parent!==window && e.source!==window.parent)return;
-    if(!d.uid||!d.dataPath||!d.firebaseConfig){console.error('[FluxGK] minutes: contexto incompleto',d);return;}
+    if(!d.uid||!d.dataPath||!d.cloudConfig){console.error('[FluxGK] minutes: contexto incompleto',d);return;}
     window._HUB=d;
     /* idioma definido no hub (persist=false: a escolha e do hub) */
     if(d.lang) FluxGKI18n.setLang(d.lang,false);
@@ -36,7 +35,7 @@
     /* a temporada ativa vira a unica "season" dos filtros */
     ST.seasons=[se.label||''];
     try{_renderCtxStrip();}catch(err){}
-    if(!_fbReady)_initMinFB(d.firebaseConfig);
+    if(!_fbReady)_initMinFB(d.cloudConfig);
   });
   try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:'FLUXGK_MODULE_READY',module:'minutes'},'*'); }catch(e){}
   window._renderCtxStrip=function(){
@@ -49,7 +48,7 @@
   function _initMinFB(cfg){
     /* carrega os SDKs EM SEQUENCIA, esperando cada um DE VERDADE.
        verificar se a tag existe nao basta: a tag pode existir mas o
-       codigo ainda nao ter rodado (foi o que causava firebase.database is not a function). */
+       codigo ainda nao ter rodado (foi o que causava fluxdb.database is not a function). */
     function ld(src){
       return new Promise(function(res,rej){
         var ex=document.querySelector('script[src="'+src+'"]');
@@ -61,17 +60,16 @@
         document.head.appendChild(s);
       });
     }
-    var B='https://www.gstatic.com/firebasejs/9.23.0/';
-    ld(B+'firebase-app-compat.js')
-      .then(function(){return ld(B+'firebase-auth-compat.js');})
-      .then(function(){return ld(B+'firebase-database-compat.js');})
+    var B='/static/';
+    ld(B+'vendor/pocketbase.umd.js')
+      .then(function(){return ld(B+'pocketbase-adapter.js');})
       .then(function(){
-      if(!firebase.apps.length) firebase.initializeApp(cfg);
-      var db=firebase.database();
+      if(!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+      var db=fluxdb.database();
       window.fbSet=function(p,v){return db.ref(p).set(v);};
       window.fbGet=function(p){return db.ref(p).get();};
       window.fbRemove=function(p){return db.ref(p).remove();};
-      firebase.auth().onAuthStateChanged(function(u){
+      fluxdb.auth().onAuthStateChanged(function(u){
         if(!u){console.error('[FluxGK] minutes: sem sessao. Abra pelo hub.');return;}
         if(_fbReady)return; _fbReady=true;
         console.log('[FluxGK] minutes: autenticado como',u.uid);
@@ -93,7 +91,7 @@
           else{dot.style.background='#dc2626';if(txt)txt.textContent='offline';}
         });
       });
-    }).catch(function(e){console.error('[FluxGK] minutes: falha ao carregar Firebase',e);});
+    }).catch(function(e){console.error('[FluxGK] minutes: falha ao carregar PocketBase',e);});
   }
 })();
 </script>
@@ -1190,7 +1188,7 @@ function buildMinutesPDF(games,gks,opts){
   }).join('');
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${TX("min.pdf.docTitle")}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Space Grotesk',sans-serif;background:#fafaf7;color:#0a0a0a;font-size:13px;}

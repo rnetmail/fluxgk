@@ -10,7 +10,7 @@
 <title data-i18n="xg.tracker">Futsal xG Tracker</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+@import url('/static/fonts/fonts.css');
 :root{
   --bg:#fafaf7;--bg2:#ffffff;--bg3:#f4f4f1;--bg4:#ebebea;
   --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
@@ -673,7 +673,7 @@ function exportPDF(){
   if(!win){alert(TX('xg.msg.allowPopups'));return;}
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<style>'
-    +"@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@500;600&display=swap');"
+    +"@import url('/static/fonts/fonts.css');"
     +"*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:0;}\nbody{font-family:'DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#111827;background:#fff;}\n@page{size:A4 portrait;margin:12mm 10mm;}\n.pdf-page:last-child{page-break-after:avoid;break-after:avoid;}\nimg{max-width:100%;display:block;}\n.xg-card{background:var(--bg3);border-radius:11px;padding:11px;border:1px solid var(--border);text-align:center;}\n  @page{size:A4 portrait;margin:12mm 10mm;}\n  #pdf-report{display:block!important;}\n  .pdf-page{page-break-after:always;}\n  .pdf-page:last-child{page-break-after:avoid;}\n#pdf-report{display:block;font-family:'Syne','Helvetica Neue',Helvetica,Arial,sans-serif;color:#111827;background:#fff;}\n.pdf-page{width:100%;background:#fff;page-break-after:always;break-after:page;}\n.pdf-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #111827;padding-bottom:10px;margin-bottom:14px;}\n.pdf-title-blk{display:flex;flex-direction:column;}\n.pdf-app-tag{font-size:9px;font-weight:600;letter-spacing:2px;color:#999;text-transform:uppercase;margin-bottom:2px;}\n.pdf-match-name{font-size:21px;font-weight:800;letter-spacing:-.5px;line-height:1.1;}\n.pdf-match-meta{font-size:10px;color:#666;margin-top:3px;font-family:'DM Mono',monospace;}\n.pdf-logos{display:flex;align-items:center;gap:10px;}\n.pdf-logo-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}\n.pdf-logo-img{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid #eee;}\n.pdf-logo-ph{width:44px;height:44px;border-radius:8px;background:#f5f5f5;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:24px;}\n.pdf-vs{font-size:11px;font-weight:700;color:#bbb;}\n.pdf-team-sm{font-size:8px;font-weight:700;color:#666;text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}\n.pdf-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;}\n.pdf-kpi{background:#f9f9f9;border-radius:7px;padding:7px 5px;text-align:center;border:1px solid #eee;}\n.pdf-kpi-val{font-size:18px;font-weight:800;font-family:'DM Mono',monospace;line-height:1;}\n.pdf-kpi-lbl{font-size:7px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}\n.pdf-compare{display:grid;grid-template-columns:1fr 56px 1fr;gap:7px;margin-bottom:12px;align-items:center;}\n.pdf-tcol{background:#f9f9f9;border-radius:9px;padding:10px;border:1px solid #eee;}\n.pdf-tcol.alfa{border-left:3px solid #3B82F6;}\n.pdf-tcol.beta{border-left:3px solid #F59E0B;}\n.pdf-tc-name{font-size:12px;font-weight:800;margin-bottom:6px;}\n.pdf-tc-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid #f0f0f0;}\n.pdf-tc-row:last-child{border-bottom:none;}\n.pdf-tc-k{color:#777;}\n.pdf-tc-v{font-weight:700;font-family:'DM Mono',monospace;}\n.pdf-mid{text-align:center;}\n.pdf-score{font-size:26px;font-weight:800;font-family:'DM Mono',monospace;}\n.pdf-score-lbl{font-size:8px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;}\n.pdf-section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:3px;}\n.pdf-court-img{width:100%;border-radius:7px;border:1px solid #eee;display:block;margin-bottom:12px;}\n.pdf-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}\n.pdf-table{width:100%;border-collapse:collapse;font-size:9px;}\n.pdf-table th{background:#111827;color:#fff;padding:5px 7px;text-align:left;font-size:8px;letter-spacing:.5px;text-transform:uppercase;}\n.pdf-table td{padding:4px 7px;border-bottom:1px solid #f0f0f0;}\n.pdf-table tr:nth-child(even) td{background:#fafafa;}\n.t-alfa{color:#3B82F6;font-weight:700;}\n.t-beta{color:#F59E0B;font-weight:700;}\n.xg-c{font-family:'DM Mono',monospace;font-weight:600;}\n.gol-b{background:#fee2e2;color:#dc2626;padding:1px 5px;border-radius:10px;font-size:8px;font-weight:700;}\n.pdf-foot{margin-top:12px;border-top:1px solid #eee;padding-top:7px;display:flex;justify-content:space-between;}\n.pdf-foot-txt{font-size:8px;color:#bbb;font-family:'DM Mono',monospace;}"
     +(function(){
       var ac=_accent();
@@ -1344,7 +1344,7 @@ function renderSeason(){
     +'<div class="cd2"><div style="font-size:11px;font-weight:700;margin-bottom:8px;">'+TX("xg.pdf.byOpponent")+'</div>'+advRows+'</div>';
 }
 
-/* ════════ FIREBASE REALTIME DATABASE ════════ */
+/* ════════ POCKETBASE ════════ */
 // Projeto e caminho vem do hub (FLUXGK_CONTEXT): dataPath + '/xg'
 var _fbXGApp=null,_fbXGDb=null,_fbXGReady=false;
 var _HUB=null;
@@ -1359,7 +1359,7 @@ window.addEventListener('message', function(e){
   var d=e.data;
   if(!d || d.type!=='FLUXGK_CONTEXT') return;
   if(window.parent!==window && e.source!==window.parent) return;
-  if(!d.uid || !d.dataPath || !d.firebaseConfig){ console.error('[FluxGK] xG: contexto incompleto', d); return; }
+  if(!d.uid || !d.dataPath || !d.cloudConfig){ console.error('[FluxGK] xG: contexto incompleto', d); return; }
   _HUB=d;
   /* idioma definido no hub (persist=false: a escolha e do hub) */
   if(d.lang) FluxGKI18n.setLang(d.lang,false);
@@ -1367,7 +1367,7 @@ window.addEventListener('message', function(e){
   _XPATH.games     = d.dataPath + '/xg/games';
   _XPATH.opponents = 'users/'+d.uid+'/clubs/'+(d.club&&d.club.id)+'/opponents';
   /* LIMPA cache local: pode conter dados de outra conta (localStorage e do navegador, nao da conta).
-     O Firebase, isolado por uid, vai preencher em seguida. */
+     O PocketBase, isolado por uid, vai preencher em seguida. */
   try{ localStorage.removeItem('fxg_games'); localStorage.removeItem('fxg_clubs'); }catch(e){}
   console.log('[FluxGK] xG: jogos em', _XPATH.games);
   console.log('[FluxGK] xG: adversarios em', _XPATH.opponents);
@@ -1380,7 +1380,7 @@ window.addEventListener('message', function(e){
   _hubSeason= (d.season&&d.season.label) || '';
   try{_renderCtxStrip();}catch(err){}
 
-  if(!_fbXGReady) _initFBXG(d.firebaseConfig);
+  if(!_fbXGReady) _initFBXG(d.cloudConfig);
 });
 try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:'FLUXGK_MODULE_READY',module:'xg'},'*'); }catch(e){}
 
@@ -1409,16 +1409,15 @@ function _initFBXG(cfg){
         document.head.appendChild(s);
       });
     }
-    var B='https://www.gstatic.com/firebasejs/9.23.0/';
-    ld(B+'firebase-app-compat.js')
-      .then(function(){return ld(B+'firebase-auth-compat.js');})
-      .then(function(){return ld(B+'firebase-database-compat.js');})
+    var B='/static/';
+    ld(B+'vendor/pocketbase.umd.js')
+      .then(function(){return ld(B+'pocketbase-adapter.js');})
       .then(function(){
-      if(!firebase.apps.length) firebase.initializeApp(cfg);
-      _fbXGApp=firebase.app();
-      _fbXGDb=firebase.database(_fbXGApp);
+      if(!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+      _fbXGApp=fluxdb.app();
+      _fbXGDb=fluxdb.database(_fbXGApp);
       /* mesma origem + mesmo projeto => a sessao do hub e herdada */
-      firebase.auth().onAuthStateChanged(function(u){
+      fluxdb.auth().onAuthStateChanged(function(u){
         if(!u){ console.error('[FluxGK] xG: sem sessao. Abra pelo hub.'); return; }
         if(_fbXGReady) return;
         _fbXGReady=true;
@@ -1432,7 +1431,7 @@ function _initFBXG(cfg){
         }).catch(function(e){console.warn('xG opponents pull:',e);});
         updateFBStatus();
       });
-    }).catch(function(e){console.error("[FluxGK] falha ao carregar Firebase",e);});
+    }).catch(function(e){console.error("[FluxGK] falha ao carregar PocketBase",e);});
 }
 
 const FB={
@@ -1454,7 +1453,7 @@ const FB={
     catch(e){return false;}
   },
   async test(){return _fbXGReady;},
-  _cfg(){return _fbXGReady?{pid:(_HUB&&_HUB.firebaseConfig&&_HUB.firebaseConfig.projectId)||'—'}:null;}
+  _cfg(){return _fbXGReady?{pid:(_HUB&&_HUB.cloudConfig&&_HUB.cloudConfig.projectId)||'—'}:null;}
 };
 
 function openFB(){
@@ -1482,7 +1481,7 @@ async function syncToCloud(){
 }
 
 async function saveFBConfig(){
-  // Manual sync — pull latest from Firebase and merge with local
+  // Manual sync — pull latest from PocketBase and merge with local
   if(!FB.ready()){toast(TX('xg.fbNotReady'));return;}
   const remote=await FB.get('main');
   if(remote){
@@ -1519,10 +1518,13 @@ async function importFromCloud(){
 }
 
 async function diagFB(){
-  const pre=document.getElementById('fb-diag');pre.style.display='block';pre.textContent='Searching...';
+  const pre=document.getElementById('fb-diag');pre.style.display='block';
+  /* O diagnostico varria o Firestore do projeto do Google. Saiu junto com a
+     dependencia: os dados agora vivem no PocketBase da propria stack. */
+  pre.textContent='Legacy cloud diagnostics removed — data now lives in the FluxGK stack.';return;
   const pid=FB._cfg()&&FB._cfg().pid,key=FB._cfg()&&FB._cfg().key;
   if(!pid||!key){pre.textContent=TX('xg.noCreds');return;}
-  const base='https://firestore.googleapis.com/v1/projects/'+pid+'/databases/(default)/documents';
+  const base='/api/legacy-removed/'+pid+'/databases/(default)/documents';
   const results={};
   for(const col of['fxg_data','games','data']){
     try{const r=await fetch(base+'/'+col+'?key='+key);results[col]=r.ok?await r.json():'HTTP '+r.status;}catch(e){results[col]='erro: '+e.message;}
@@ -1710,7 +1712,7 @@ function cancelEdit(){
 </div>
 
 <div class="overlay" id="ov-fb" onclick="closeOvOut(event,'ov-fb')">
-  <div class="sheet"><div class="sheet-header"><div class="sheet-title"data-i18n="xg.fb.title">☁ Firebase</div><button class="sheet-close" onclick="closeOv('ov-fb')" aria-label="Close" data-i18n-aria-label="common.close">✕</button></div>
+  <div class="sheet"><div class="sheet-header"><div class="sheet-title"data-i18n="xg.fb.title">☁ PocketBase</div><button class="sheet-close" onclick="closeOv('ov-fb')" aria-label="Close" data-i18n-aria-label="common.close">✕</button></div>
   <div class="sheet-body"><div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
     <div id="fb-status-bar" style="padding:8px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);font-size:12px;font-family:var(--font-m);color:var(--text2);" data-i18n="xg.fb.noCloud">● No cloud</div>
     <div><div class="flbl2" data-i18n="xg.fb.pid">Project ID</div><input type="text" id="fb-pid" class="fin2" placeholder="my-project-12345"></div>

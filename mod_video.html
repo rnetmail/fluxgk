@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FluxGK · Video Lab — Teste de Exportação</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <script src="https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js"></script>
 <script>
   // Fallback: se o jsDelivr estiver bloqueado/indisponível, tenta o cdnjs.
@@ -2062,8 +2060,8 @@ function relGerar(){
   }).join('');
 
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + e(titulo) + ' — ' + e(sub) + '</title>'
-   + '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-   + '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">'
+   + ''
+   + '<link rel="stylesheet" href="/static/fonts/fonts.css">'
    + '<style>*{box-sizing:border-box;margin:0;padding:0}'
    + 'body{font-family:\'Space Grotesk\',\'Helvetica Neue\',Helvetica,Arial,sans-serif;background:#fafaf7;color:#0a0a0a;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
    + '@page{size:A4;margin:16mm 14mm}@page:first{margin:0}'
@@ -8154,7 +8152,7 @@ const LIB_KEY = 'fluxgk_videolab_library_v1';
       MAIS lances. Uma sessao que so existe aqui nunca e removida.
 
    2) A gravacao na nuvem nao tinha tratamento de erro nenhum — nem
-      .catch(). Firebase recusando a gravacao (tamanho, permissao,
+      .catch(). PocketBase recusando a gravacao (tamanho, permissao,
       rede) era um erro engolido e o trabalho seguia como se estivesse
       salvo. Agora falha e um aviso fixo na tela, com nova tentativa.
 
@@ -8442,7 +8440,7 @@ function libWrite(all){
 }
 var _svLocalRuim = false, _svNuvemRuim = false;
 /* A biblioteca é indexada por "nome|tamanho" do arquivo, e nomes têm PONTO (.mp4).
-   O Firebase NÃO aceita chaves com . # $ [ ] / — então na nuvem gravamos a
+   O PocketBase NÃO aceita chaves com . # $ [ ] / — então na nuvem gravamos a
    biblioteca como LISTA (cada item guarda sua própria chave em __key) e
    reconstruímos o objeto ao ler. Sem isso, a gravação inteira falhava. */
 function libToCloud(){
@@ -9082,7 +9080,7 @@ function buildClips(file, ranges, progress){
   });
 }
 
-var _videoDataPath = null;  /* declarado cedo: applyContext usa antes da secao Firebase */
+var _videoDataPath = null;  /* declarado cedo: applyContext usa antes da secao PocketBase */
 var FB_CONFIG_HUB = null;
 /* ================= INTEGRAÇÃO COM O HUB FLUXGK ================= */
 /* Branding via postMessage (cor, nome, badge do clube) — igual aos outros módulos */
@@ -9091,7 +9089,7 @@ let _lastContext = null;  // guarda o contexto do clube para repassar a uma aba 
   function applyContext(ctx){
     if (!ctx) return;
     try {
-      // o hub envia { type, uid, firebaseConfig, profile:{ clubColor, clubName, clubBadge, coachName } }
+      // o hub envia { type, uid, cloudConfig, profile:{ clubColor, clubName, clubBadge, coachName } }
       const prof = ctx.profile || ctx;
       _lastContext = { profile: prof, uid: ctx.uid || (_lastContext && _lastContext.uid) };
       if (prof.clubColor){
@@ -9109,7 +9107,7 @@ let _lastContext = null;  // guarda o contexto do clube para repassar a uma aba 
       if (ctx.coach && ctx.coach.name) window._fluxgkCoach = ctx.coach.name;
       /* caminho por temporada (formato novo do hub) */
       if (ctx.dataPath) _videoDataPath = ctx.dataPath + '/video';
-      if (ctx.firebaseConfig) FB_CONFIG_HUB = ctx.firebaseConfig;
+      if (ctx.cloudConfig) FB_CONFIG_HUB = ctx.cloudConfig;
       /* idioma definido no hub (persist=false: a escolha e do hub) */
       if (ctx.lang) FluxGKI18n.setLang(ctx.lang, false);
       if (ctx.season) window._fluxgkSeason = ctx.season.label || '';
@@ -9117,7 +9115,7 @@ let _lastContext = null;  // guarda o contexto do clube para repassar a uma aba 
       try { _renderVideoCtxStrip(); } catch(e){}
       if (ctx.uid) {
         window._fluxgkUid = ctx.uid;
-        if (!_fbReady) initFirebase();   /* inicia com a config do hub */
+        if (!_fbReady) initCloud();   /* inicia com a config do hub */
         else pullFromCloud();
       }
     } catch (e) { /* invalid context — ignore */ }
@@ -9185,7 +9183,7 @@ let _lastContext = null;  // guarda o contexto do clube para repassar a uma aba 
   }
 })();
 
-/* Firebase: Auth + Realtime Database — espelha os dados leves (vídeo fica local)
+/* PocketBase: Auth + Realtime Database — espelha os dados leves (vídeo fica local)
    Nao ha projeto proprio: a config vem do hub (FB_CONFIG_HUB). */
 console.log('%c[FluxGK] video v2.0 — consumidor do hub','color:#E8901A;font-weight:bold');
 /* FB_CONFIG_HUB e _videoDataPath ja declarados no topo */
@@ -9200,18 +9198,16 @@ function ldScript(src){
   });
 }
 
-async function initFirebase(){
+async function initCloud(){
   try {
-    await ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-    await ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
-    await ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
-    if (!window.firebase) return;
+    await ldScript('/static/pocketbase-adapter.js');
+    if (!window.fluxdb) return;
     var cfg = FB_CONFIG_HUB;   /* config exclusiva do hub */
-    if (!cfg){ console.error('[FluxGK] video: sem firebaseConfig do hub. Abra pelo hub.'); return; }
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    fbDB = firebase.database();
+    if (!cfg){ console.error('[FluxGK] video: sem cloudConfig do hub. Abra pelo hub.'); return; }
+    if (!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+    fbDB = fluxdb.database();
     _fbReady = true;
-    firebase.auth().onAuthStateChanged((u) => {
+    fluxdb.auth().onAuthStateChanged((u) => {
       fbUser = u;
       if (u){
         log('Connected to the FluxGK cloud as ' + (u.email || u.uid) + '. Syncing…');
@@ -9242,7 +9238,7 @@ function pushToCloud(){
         updatedAt: Date.now(),
       };
       if (!_videoDataPath) return;   /* sem contexto do hub: nao grava fora de users/{uid} */
-      /* Antes nao havia .catch(): o Firebase podia recusar a gravacao
+      /* Antes nao havia .catch(): o PocketBase podia recusar a gravacao
          (tamanho, permissao, rede) e o erro era engolido — voce seguia
          cortando achando que estava salvo. */
       fbDB.ref(_videoDataPath).set(payload)
@@ -9348,7 +9344,7 @@ renderDrawList();
 renderProjectTab();
 applyDock();
 syncPanels();
-initFirebase();
+initCloud();
 showVlHome();   /* abre no lançador, estilo LongoMatch */
 log(TX('vid.msg.ready'));
 </script>

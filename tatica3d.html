@@ -6,8 +6,7 @@
 <title>FluxGK · Tactics 3D</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <script src="fluxgk-i18n.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
   :root{
     --paper:#fafaf7; --ink:#0a0a0a; --accent:#1E4FFF; --red:#E03131;
@@ -188,9 +187,9 @@
   <input type="file" id="fileinput" accept=".json">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+<script src="/static/vendor/three.min.js"></script>
+<script src="/static/vendor/GLTFLoader.js"></script>
+<script src="/static/vendor/SkeletonUtils.js"></script>
 <script>
 /* ============================================================
    FLUXGK · TÁTICA 3D — quadra de futsal 3D interativa
@@ -2041,7 +2040,7 @@ function cenaAtual(){
     objetos: placeables.map(o=>{
       const r = { k:o.userData.kind, x:+o.position.x.toFixed(3), z:+o.position.z.toFixed(3),
                   r:+o.rotation.y.toFixed(4), s:+o.scale.x.toFixed(3) };
-      /* a chave so existe quando ha cor: um 'undefined' aqui faz o Firebase
+      /* a chave so existe quando ha cor: um 'undefined' aqui faz o PocketBase
          recusar a gravacao inteira do exercicio, e o desenho se perdia */
       if(o.userData.cor != null) r.c = o.userData.cor;
       return r;

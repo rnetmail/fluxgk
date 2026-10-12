@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>FluxGK · Training Planner</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--ink:#0A0A0A;--paper:#FAFAF7;--mute:#737373;--faint:#E5E5E5;--sur:#fff;--bdr:#E5E5E5;--ok:#16A34A;--cau:#D97706;--risk:#DC2626;--club-color:#0A0A0A}
@@ -421,7 +421,7 @@ const PAGES = {
       <button class="btn btn-p" onclick="exportAll()">${TX("plan.exportAll")}</button>
     </div>
   </div>
-  <!-- Firebase config banner -->
+  <!-- PocketBase config banner -->
   <div id="libraryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
     <div class="empty" style="grid-column:1/-1">
       <div style="font-size:36px;opacity:.22;margin-bottom:12px">📋</div>
@@ -465,7 +465,7 @@ const PAGES = {
 
 
 // ══════════════════════════════════════════════════════════════
-//  FLUXGK — Full app with session lifecycle + library + Firebase
+//  FLUXGK — Full app with session lifecycle + library + PocketBase
 // ══════════════════════════════════════════════════════════════
 
 
@@ -484,7 +484,7 @@ console.log('%c[FluxGK] planner v2.5 (fluxo save-to-library + post claro) — co
 
 /* ============================================================
    O Planner nao tem mais identidade propria: nem cor, nem escudo,
-   nem config de Firebase. Ele RECEBE do hub e obedece.
+   nem config de PocketBase. Ele RECEBE do hub e obedece.
 
    sessoes    -> users/{uid}/data/{clube}/{temporada}/planner/sessions
    biblioteca -> users/{uid}/library/exercises
@@ -498,7 +498,7 @@ window.addEventListener('message', function(e){
   var d=e.data;
   if(!d || d.type!=='FLUXGK_CONTEXT') return;
   if(window.parent!==window && e.source!==window.parent) return;
-  if(!d.uid || !d.dataPath || !d.firebaseConfig){
+  if(!d.uid || !d.dataPath || !d.cloudConfig){
     console.error('[FluxGK] planner: contexto incompleto do hub', d); return;
   }
   _HUB=d;
@@ -526,7 +526,7 @@ window.addEventListener('message', function(e){
 
   try{_renderHubIdentity();}catch(err){}
   try{_renderContextStrip();}catch(err){}
-  if(!_fbReady) _loadFirebase(d.firebaseConfig);
+  if(!_fbReady) _loadCloud(d.cloudConfig);
 });
 try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:'FLUXGK_MODULE_READY',module:'planner'},'*'); }catch(e){}
 
@@ -553,22 +553,22 @@ function _renderHubIdentity(){
 
 let _currentPage      = 'session';
 let _sessionOpen      = false;
-let savedSessions   = [];   /* NAO carrega do localStorage: e compartilhado entre contas no mesmo navegador. O Firebase (isolado por uid) e a unica fonte. */
+let savedSessions   = [];   /* NAO carrega do localStorage: e compartilhado entre contas no mesmo navegador. O PocketBase (isolado por uid) e a unica fonte. */
 let savedExercises  = [];
 let _wizMode        = 'session';   // 'session' | 'lib'
 let _libEditId      = null;        // id do exercício da biblioteca em edição
 let selectedSessions= new Set();
-let fbDatabase  = null;   // Firebase Realtime DB reference (null = local only)
+let fbDatabase  = null;   // PocketBase reference (null = local only)
 
-// ── FIREBASE CONFIG ───────────────────────────────────────────
+// ── CLOUD CONFIG ───────────────────────────────────────────
 // Nao ha projeto proprio: a config vem do hub via FLUXGK_CONTEXT.
-let FIREBASE_CONFIG = null;
+let CLOUD_CONFIG = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 (function(){
   console.log("FluxGK v5.2 loaded - navigation fix active");
 
-  // Auto-connect Firebase
+  // Auto-connect PocketBase
   // Render initial session page
   const initApp = document.getElementById('app');
   if(initApp) initApp.innerHTML = PAGES.session;
@@ -658,7 +658,7 @@ function handleImgDrop(e){
 /* Desenho da quadra tatica do exercicio aberto no formulario.
    Antes so a figura era guardada; reabrir a quadra comecava do zero. */
 var _currentTatica=null;
-/* O Firebase recusa a gravacao inteira se houver um unico 'undefined'.
+/* O PocketBase recusa a gravacao inteira se houver um unico 'undefined'.
    Limpa antes de guardar o desenho dentro do exercicio. */
 function _semUndefined(v){
   if(Array.isArray(v)) return v.map(_semUndefined).filter(function(x){ return x!==undefined; });
@@ -747,7 +747,7 @@ function confirmEx(){
   };
   /* o desenho viaja com o exercicio: biblioteca, sessao e nuvem */
   if(_currentTatica) ex.tatica=_currentTatica;
-  /* nunca gravar undefined: o Firebase rejeita a escrita inteira */
+  /* nunca gravar undefined: o PocketBase rejeita a escrita inteira */
   if(_currentImgData && _currentImgData.indexOf('image/jpeg')>-1) ex.imgQ='jpeg';
   if(_wizMode==='lib'){
     ex.id = _libEditId || Date.now();
@@ -1333,7 +1333,7 @@ function toggleLibOrder(){
    ESPELHO LOCAL DAS SESSOES
    A nuvem e a fonte da verdade, mas ela pode falhar calada: caminho
    trocado, regra negada, rede caida na hora exata do "salvar". Ate
-   hoje, uma sessao criada e salva so existia no Firebase — se a
+   hoje, uma sessao criada e salva so existia no PocketBase — se a
    gravacao nao chegasse, nao sobrava copia nenhuma.
    Agora toda sessao salva deixa uma copia no navegador, marcada com
    a conta e o caminho, para poder ser devolvida com um clique.
@@ -1441,7 +1441,7 @@ async function buscarOutrasTemporadas(){
     const raiz = snap.val() || {};
     const achados = [];
     /* varredura em profundidade: uma temporada como "26/27" vira dois niveis
-       no caminho do Firebase, entao nao da para assumir clube/temporada */
+       no caminho do PocketBase, entao nao da para assumir clube/temporada */
     (function varrer(no, trilha){
       if(!no || typeof no !== 'object') return;
       if(no.planner && no.planner.sessions){
@@ -1596,7 +1596,7 @@ function deleteSession(id){
 // ── EXPORT ────────────────────────────────────────────────────
 function buildReportHTML(sessions){
   const P   = _clubColor || '#0A0A0A';   // primary colour — same var name as load report
-  // Read from in-memory state (populated by Firebase listener) with localStorage fallback
+  // Read from in-memory state (populated by PocketBase listener) with localStorage fallback
   const _ssCached = JSON.parse('{}'  /* settings vem do hub, nao do localStorage */ && localStorage.getItem('_disabled_fluxgk_settings')||'{}');
   const coa = (_sessionFormState._coachName || _ssCached.coachName || '').trim();
   const cn  = (_sessionFormState._clubName  || _ss.clubName  || 'FluxGK').trim();
@@ -1713,7 +1713,7 @@ function buildReportHTML(sessions){
   return `<!DOCTYPE html><html><head>
   <meta charset="UTF-8"/>
   <title>${TX("plan.pdf.docTitle")}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{--p:${P};--mt:#737373;--tx:#0A0A0A;--ht:#aaa;--bd2:#e0ddd8}
@@ -1776,7 +1776,7 @@ function buildReportHTML(sessions){
 
 
 function exportSession(id){
-  // Use == to handle string/number mismatch (Firebase stores keys as strings)
+  // Use == to handle string/number mismatch (PocketBase stores keys as strings)
   const s=savedSessions.find(s=>s.id==id);
   if(!s){ toast(TX('plan.msg.sessionNotFound')); return; }
   openReport([s]);
@@ -1800,52 +1800,51 @@ function previewSession(id){
   exportSession(id); // same action for now
 }
 
-// ── FIREBASE ─────────────────────────────────────────────────
-// Internal: load Firebase SDKs then init with given config
-function _loadFirebase(cfg){
+// ── POCKETBASE ─────────────────────────────────────────────────
+// Internal: load PocketBase SDKs then init with given config
+function _loadCloud(cfg){
   const status=document.getElementById('fbStatus');
   if(status) status.textContent=TX('plan.msg.connecting');
   const scripts=[
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
+    '/static/vendor/pocketbase.umd.js',
+    '/static/pocketbase-adapter.js'
   ];
   let loaded=0;
   scripts.forEach(src=>{
     // Skip if already loaded
-    if(document.querySelector(`script[src="${src}"]`)){loaded++;if(loaded===scripts.length)_initFirebase(cfg);return;}
+    if(document.querySelector(`script[src="${src}"]`)){loaded++;if(loaded===scripts.length)_initCloud(cfg);return;}
     const s=document.createElement('script');
     s.src=src;
-    s.onload=()=>{ loaded++; if(loaded===scripts.length) _initFirebase(cfg); };
+    s.onload=()=>{ loaded++; if(loaded===scripts.length) _initCloud(cfg); };
     s.onerror=()=>{ if(status){status.textContent=TX('plan.msg.sdkFail');status.style.color='var(--risk)';} };
     document.head.appendChild(s);
   });
 }
 
-function _initFirebase(cfg){
+function _initCloud(cfg){
   const status=document.getElementById('fbStatus');
   try{
-    if(!window.firebase){ setTimeout(()=>_initFirebase(cfg),200); return; }
-    if(!firebase.apps.length) firebase.initializeApp(cfg);
-    fbDatabase=firebase.database();
-    firebase.auth().onAuthStateChanged(function(u){
+    if(!window.fluxdb){ setTimeout(()=>_initCloud(cfg),200); return; }
+    if(!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+    fbDatabase=fluxdb.database();
+    fluxdb.auth().onAuthStateChanged(function(u){
       if(!u){ console.error('[FluxGK] planner: sem sessao. Faca login pelo hub.'); return; }
       if(!_fbReady){ _fbReady=true; console.log('[FluxGK] planner: autenticado como', u.uid); }
       setTimeout(flushPending,300);      /* sobe o que ficou na fila */
       /* Os listeners so podem subir DEPOIS do login. Ligados antes, as regras
-         do banco negavam a leitura, o Firebase cancelava a inscricao em
+         do banco negavam a leitura, o PocketBase cancelava a inscricao em
          silencio e ela nunca voltava — a biblioteca ficava vazia para sempre. */
       _ligarListeners();
     });
     if(status){ status.textContent='☁️ '+TX('plan.connected'); status.style.color='var(--ok)'; }
-    _updateFirebaseBanner(true);
+    _updateCloudBanner(true);
 
     /* listener de 'settings' REMOVIDO — identidade vem do hub */
 
 
   } catch(e){
     if(status){ status.textContent='Error: '+e.message; status.style.color='var(--risk)'; }
-    console.error('Firebase init error:',e);
+    console.error('PocketBase init error:',e);
   }
 }
 
@@ -1898,8 +1897,8 @@ function _ligarListeners(){
   });
 }
 
-function _updateFirebaseBanner(connected){
-  const banner=document.getElementById('firebaseBanner');
+function _updateCloudBanner(connected){
+  const banner=document.getElementById('cloudBanner');
   if(!banner) return;
   if(connected){
     banner.innerHTML=`<div style="font-size:18px">☁️</div>
@@ -1910,13 +1909,13 @@ function _updateFirebaseBanner(connected){
   }
 }
 
-function connectFirebase(){
+function connectCloud(){
   // Called from the manual connect button (fallback)
   const raw=document.getElementById('fbConfigInput')?.value.trim();
-  let cfg=FIREBASE_CONFIG;
+  let cfg=CLOUD_CONFIG;
   if(raw){ try{ cfg=JSON.parse(raw); }catch(e){ toast(TX('plan.invalidJson')); return; } }
   if(!cfg){ toast(TX('plan.msg.openFromHub')); return; }
-  _loadFirebase(cfg);
+  _loadCloud(cfg);
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
@@ -1945,7 +1944,7 @@ function pickColor(el){
   _clubColor = el.dataset.c || el.value || '#0A0A0A';
   _applyClubColor(_clubColor);
   localStorage.setItem('fluxgk_color', _clubColor);
-  // Push colour to Firebase immediately
+  // Push colour to PocketBase immediately
   /* cor: definida no HUB */
 }
 
@@ -1980,7 +1979,7 @@ function handleBadgeUpload(input){
     // Update nav badge
     _updateNavBadge();
     localStorage.setItem('fluxgk_badge', _clubBadge);
-    // Also push to Firebase immediately (don't wait for Save Settings)
+    // Also push to PocketBase immediately (don't wait for Save Settings)
     /* escudo: definido no HUB */
   };
   reader.readAsDataURL(file);
@@ -2014,8 +2013,8 @@ function _updateNavBadge(){
 }
 
 function _loadBadgeState(){
-  // Settings are stored in Firebase and cached in localStorage
-  // Priority: in-memory state > Firebase cache > localStorage
+  // Settings are stored in PocketBase and cached in localStorage
+  // Priority: in-memory state > PocketBase cache > localStorage
   const _src = (()=>{
     // Try in-memory first
     if(_sessionFormState._clubName) return {
@@ -2070,7 +2069,7 @@ function _loadBadgeState(){
 
 function saveCurrentSession(){
   _saveSessionForm();
-  /* arquiva DIRETO na biblioteca (Firebase). reusa closeSession, que ja
+  /* arquiva DIRETO na biblioteca (PocketBase). reusa closeSession, que ja
      grava e sincroniza. a sessao passa a existir na Library na hora. */
   _persistSessionToLibrary();
   toast(TX('plan.msg.savedToLib'));
@@ -2177,7 +2176,7 @@ function saveSettings(){
   if(settings.badge)     localStorage.setItem('fluxgk_badge',  settings.badge);
   if(settings.clubColor) localStorage.setItem('fluxgk_color',  settings.clubColor);
   // Identidade (clube/tecnico/temporada) pertence ao HUB — nao gravamos no
-  // Firebase daqui. Gravar em 'settings' na raiz violaria as regras de
+  // PocketBase daqui. Gravar em 'settings' na raiz violaria as regras de
   // seguranca (tudo fora de users/{uid} e negado) e sobrescreveria o hub.
   toast(TX('plan.msg.settingsLocal'));
 }

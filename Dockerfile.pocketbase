@@ -1,0 +1,43 @@
+# FluxGK · PocketBase a partir do BINÁRIO OFICIAL do GitHub releases.
+#
+# Por que não usar imagem pronta: o docker-compose que estava público em
+# public_html/portainer-stack usava `ghcr.io/pocketbase/pocketbase:0.22.18`,
+# que NÃO é publicada pelo projeto (não existe imagem oficial do PocketBase).
+# A stack simplesmente não subiria. Aqui o binário vem da release oficial,
+# com a versão fixada e conferível.
+#
+# Versão conferida neste trabalho via api.github.com/repos/pocketbase/pocketbase
+# /releases/latest → v0.40.5.
+
+FROM alpine:3.20 AS fetch
+ARG PB_VERSION=0.40.5
+ARG PB_ARCH=linux_amd64
+RUN apk add --no-cache ca-certificates curl unzip \
+ && curl -fsSL -o /tmp/pb.zip \
+      "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_${PB_ARCH}.zip" \
+ && unzip -q /tmp/pb.zip -d /pb \
+ && chmod +x /pb/pocketbase \
+ && /pb/pocketbase --version
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates tzdata wget \
+ && adduser -D -H -u 10001 pb
+COPY --from=fetch /pb/pocketbase /usr/local/bin/pocketbase
+
+# Migrations versionadas no repositório: as coleções do app nascem com a stack,
+# sem ninguém clicar no painel.
+COPY pb_migrations/ /pb/pb_migrations/
+COPY docker/pocketbase-entrypoint.sh /usr/local/bin/pocketbase-entrypoint.sh
+RUN chmod +x /usr/local/bin/pocketbase-entrypoint.sh \
+ && mkdir -p /pb/pb_data /pb/pb_public \
+ && chown -R pb:nogroup /pb
+
+WORKDIR /pb
+USER pb
+EXPOSE 8090
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 \
+  CMD wget -q --spider http://127.0.0.1:8090/api/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/pocketbase-entrypoint.sh"]
+CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--migrationsDir=/pb/pb_migrations", "--publicDir=/pb/pb_public"]

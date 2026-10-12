@@ -304,7 +304,7 @@
     'data.m.avgSleep':'Avg sleep','data.m.avgRec':'Avg recovery','data.m.outOf10':'/ 10',
     'data.msg.saveAbsence':'Save absence','data.rpt.noGkYet':'No goalkeepers added yet.',
     'data.msg.noTypeData':'No type data yet.','data.msg.exported':'Exported!',
-    'data.msg.fbUnavailable':'Firebase unavailable',
+    'data.msg.fbUnavailable':'PocketBase unavailable',
     /* ── PDF exportado ── */
     'data.pdf.coverTitle':'Goalkeeper<br>Load Report',
     'data.pdf.scope':'Scope','data.pdf.inReport':'In report','data.pdf.generated':'Generated',
@@ -406,7 +406,7 @@
     'plan.msg.openFromHub':'Open this module from the hub',
     'plan.msg.settingsLocal':'Settings saved locally — club identity comes from the hub',
     'plan.msg.connecting':'Connecting...','plan.msg.sdkFail':'SDK load failed',
-    'plan.msg.fbConnected':'Firebase connected —','plan.msg.fbSyncing':'syncing across devices',
+    'plan.msg.fbConnected':'PocketBase connected —','plan.msg.fbSyncing':'syncing across devices',
     'plan.msg.fbSyncSub':'Real-time sync active · All sessions are saved to the cloud',
     /* relatorio PDF do planner */
     'plan.pdf.title':'Goalkeeper<br>Training Report','plan.pdf.docTitle':'FluxGK — Training Report',
@@ -569,8 +569,8 @@
     'xg.ph.comp':'Liga Nacional','xg.ph.teamA':'Team A or pick from list','xg.ph.teamB':'Team B or pick from list',
     'xg.ph.club':'e.g. Kuwait Club','xg.ph.coach':'e.g. Lucas Pimenta','xg.ph.league':'e.g. Kuwait Premier League',
     'xg.ph.opp':'e.g. Kazma SC','xg.ph.gkName':'Goalkeeper name',
-    /* painel legado de Firebase manual */
-    'xg.fb.title':'☁ Firebase','xg.fb.noCloud':'● No cloud','xg.fb.pid':'Project ID',
+    /* painel legado de PocketBase manual */
+    'xg.fb.title':'☁ PocketBase','xg.fb.noCloud':'● No cloud','xg.fb.pid':'Project ID',
     'xg.fb.key':'API Key (Web)','xg.fb.save':'Save & connect','xg.fb.test':'Test connection',
     'xg.fb.import':'Import from cloud','xg.fb.diag':'🔍 Diagnose','xg.fb.disconnect':'Disconnect',
 
@@ -650,7 +650,7 @@
     'st.setupSub':'Manage opponents, competitions and goalkeepers for this context.',
     'st.opponents':'Opponents / Clubs','st.competitions':'Competitions','st.goalkeepers':'Goalkeepers',
     'st.add':'Add','st.uploadBadge':'Upload badge','st.change':'Change','st.myClub':'My Club',
-    'st.fbConn':'Firebase connection',
+    'st.fbConn':'PocketBase connection',
     /* PDF */
     'st.pdf.title':'GK Statistics','st.pdf.report':'Report','st.pdf.gamesIn':'Games in this report',
     'st.pdf.rptType':'Report type','st.pdf.shotsAnalyzed':'Shots analyzed','st.pdf.saveRate':'Save rate',
@@ -1029,7 +1029,7 @@
     'data.hyd':'Hyd','data.rec':'Rec',
     'plan.addedToSession':'" added to current session','plan.invalidJson':'Invalid JSON',
     'min.errorSaving':'Error saving: ','min.pctWhenSelected':'% when selected','min.selectedLbl':'Selected',
-    'xg.fbNotReady':'Firebase not ready yet, please wait...','xg.connOk':'Connection OK ✓',
+    'xg.fbNotReady':'PocketBase not ready yet, please wait...','xg.connOk':'Connection OK ✓',
     'xg.connFail':'Connection failed.','xg.noData':'No data found.','xg.dataImported':'Data imported ✓',
     'xg.noCreds':'No credentials.','xg.noDataFound':'\\n\\n⚠ No data found.',
     'st.discardEditing':'You are editing a saved game. Discard changes and start a new game?',
@@ -1372,7 +1372,7 @@
     'data.m.avgSleep':'Sono médio','data.m.avgRec':'Recuperação média','data.m.outOf10':'/ 10',
     'data.msg.saveAbsence':'Salvar ausência','data.rpt.noGkYet':'Nenhum goleiro cadastrado ainda.',
     'data.msg.noTypeData':'Sem dados de tipo ainda.','data.msg.exported':'Exportado!',
-    'data.msg.fbUnavailable':'Firebase indisponível',
+    'data.msg.fbUnavailable':'PocketBase indisponível',
     /* ── PDF exportado ── */
     'data.pdf.coverTitle':'Relatório de Carga<br>do Goleiro',
     'data.pdf.scope':'Escopo','data.pdf.inReport':'No relatório','data.pdf.generated':'Gerado em',
@@ -1474,7 +1474,7 @@
     'plan.msg.openFromHub':'Abra este módulo pelo hub',
     'plan.msg.settingsLocal':'Ajustes salvos localmente — a identidade do clube vem do hub',
     'plan.msg.connecting':'Conectando...','plan.msg.sdkFail':'Falha ao carregar o SDK',
-    'plan.msg.fbConnected':'Firebase conectado —','plan.msg.fbSyncing':'sincronizando entre aparelhos',
+    'plan.msg.fbConnected':'PocketBase conectado —','plan.msg.fbSyncing':'sincronizando entre aparelhos',
     'plan.msg.fbSyncSub':'Sincronização em tempo real ativa · Todas as sessões são salvas na nuvem',
     /* relatorio PDF do planner */
     'plan.pdf.title':'Relatório de Treino<br>do Goleiro','plan.pdf.docTitle':'FluxGK — Relatório de Treino',
@@ -1637,8 +1637,8 @@
     'xg.ph.comp':'Liga Nacional','xg.ph.teamA':'Equipe A ou escolha da lista','xg.ph.teamB':'Equipe B ou escolha da lista',
     'xg.ph.club':'ex.: Kuwait Club','xg.ph.coach':'ex.: Lucas Pimenta','xg.ph.league':'ex.: Kuwait Premier League',
     'xg.ph.opp':'ex.: Kazma SC','xg.ph.gkName':'Nome do goleiro',
-    /* painel legado de Firebase manual */
-    'xg.fb.title':'☁ Firebase','xg.fb.noCloud':'● Sem nuvem','xg.fb.pid':'ID do Projeto',
+    /* painel legado de PocketBase manual */
+    'xg.fb.title':'☁ PocketBase','xg.fb.noCloud':'● Sem nuvem','xg.fb.pid':'ID do Projeto',
     'xg.fb.key':'Chave de API (Web)','xg.fb.save':'Salvar e conectar','xg.fb.test':'Testar conexão',
     'xg.fb.import':'Importar da nuvem','xg.fb.diag':'🔍 Diagnosticar','xg.fb.disconnect':'Desconectar',
 
@@ -1718,7 +1718,7 @@
     'st.setupSub':'Gerencie adversários, competições e goleiros deste contexto.',
     'st.opponents':'Adversários / Clubes','st.competitions':'Competições','st.goalkeepers':'Goleiros',
     'st.add':'Adicionar','st.uploadBadge':'Enviar escudo','st.change':'Alterar','st.myClub':'Meu Clube',
-    'st.fbConn':'Conexão com o Firebase',
+    'st.fbConn':'Conexão com o PocketBase',
     /* PDF */
     'st.pdf.title':'Estatísticas GK','st.pdf.report':'Relatório','st.pdf.gamesIn':'Jogos neste relatório',
     'st.pdf.rptType':'Tipo de relatório','st.pdf.shotsAnalyzed':'Finalizações analisadas','st.pdf.saveRate':'Índice de defesas',
@@ -2097,7 +2097,7 @@
     'data.hyd':'Hidr','data.rec':'Rec',
     'plan.addedToSession':'" adicionado à sessão atual','plan.invalidJson':'JSON inválido',
     'min.errorSaving':'Erro ao salvar: ','min.pctWhenSelected':'% quando relacionado','min.selectedLbl':'Relacionado',
-    'xg.fbNotReady':'Firebase ainda não está pronto, aguarde...','xg.connOk':'Conexão OK ✓',
+    'xg.fbNotReady':'PocketBase ainda não está pronto, aguarde...','xg.connOk':'Conexão OK ✓',
     'xg.connFail':'Falha na conexão.','xg.noData':'Nenhum dado encontrado.','xg.dataImported':'Dados importados ✓',
     'xg.noCreds':'Sem credenciais.','xg.noDataFound':'\\n\\n⚠ Nenhum dado encontrado.',
     'st.discardEditing':'Você está editando um jogo salvo. Descartar as alterações e começar um novo jogo?',

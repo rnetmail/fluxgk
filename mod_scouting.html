@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FluxGK · Scouting</title>
 <script src="fluxgk-i18n.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
 :root{
   --ink:#0a0a0a; --paper:#fafaf7; --surface:#fff; --surface2:#f4f4f1;
@@ -124,7 +122,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--accent)}
 /* ══════════════════════════════════════════════════════════════════
    FluxGK · Scouting — protótipo isolado
    Ainda NÃO faz parte do sistema: não fala com o hub nem com o
-   Firebase. Guarda tudo no navegador e exporta em JSON, para que a
+   PocketBase. Guarda tudo no navegador e exporta em JSON, para que a
    integração futura seja só uma importação.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -145,7 +143,7 @@ let filtros = { q:'', idade:'', pais:'', liga:'', pe:'', altura:'', selecao:'', 
    Nuvem em users/{uid}/scouting — pessoal, atravessa clubes e
    temporadas, como a biblioteca de exercícios do Planner.
    O navegador guarda uma cópia só para a tela abrir instantânea;
-   a fonte de verdade é o Firebase.
+   a fonte de verdade é o PocketBase.
    ══════════════════════════════════════════════════════════════════ */
 let _db = null, _uid = null, _pronto = false, _ouvindo = false, _erroNuvem = '';
 let _sincTimer = null;
@@ -205,9 +203,8 @@ function apagarNaNuvem(id){
 
 /* ---------- handshake com o hub ---------- */
 const SDK = [
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
+  '/static/vendor/pocketbase.umd.js',
+  '/static/pocketbase-adapter.js'
 ];
 function carregaSDK(src){
   return new Promise((ok, err)=>{
@@ -221,16 +218,16 @@ window.addEventListener('message', async e=>{
   const d = e.data;
   if(!d || d.type !== 'FLUXGK_CONTEXT') return;
   if(window.parent !== window && e.source !== window.parent) return;
-  if(!d.uid || !d.firebaseConfig){ console.error('[scouting] contexto incompleto', d); return; }
+  if(!d.uid || !d.cloudConfig){ console.error('[scouting] contexto incompleto', d); return; }
   if(d.lang) try{ FluxGKI18n.setLang(d.lang, false); }catch(err){}
   _uid = d.uid;
   aplicarIdentidade(d);
   if(_pronto) return;
   try{
-    if(!window.firebase){ for(const s of SDK) await carregaSDK(s); }
-    if(!firebase.apps.length) firebase.initializeApp(d.firebaseConfig);
-    _db = firebase.database();
-    firebase.auth().onAuthStateChanged(u=>{
+    if(!window.fluxdb){ for(const s of SDK) await carregaSDK(s); }
+    if(!fluxdb.apps.length) fluxdb.initializeApp(d.cloudConfig);
+    _db = fluxdb.database();
+    fluxdb.auth().onAuthStateChanged(u=>{
       if(!u){ console.error('[scouting] sem sessão — entre pelo hub.'); _dot('#dc2626','sem sessão'); return; }
       _pronto = true;
       console.log('[scouting] autenticado como', u.uid);
@@ -238,7 +235,7 @@ window.addEventListener('message', async e=>{
       agendarSubida();
     });
   }catch(err){
-    console.error('[scouting] Firebase:', err);
+    console.error('[scouting] PocketBase:', err);
     _dot('#dc2626', err.message);
   }
 });
@@ -297,7 +294,7 @@ function aplicarIdentidade(d){
 }
 
 /* O listener só sobe DEPOIS do login: ligado antes, as regras negam a
-   leitura, o Firebase cancela a inscrição em silêncio e ela nunca volta. */
+   leitura, o PocketBase cancela a inscrição em silêncio e ela nunca volta. */
 function ligarListener(){
   if(_ouvindo || !_db || !_uid) return;
   _ouvindo = true;

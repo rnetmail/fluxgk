@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FluxGK — GK Statistics</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (function(){
@@ -19,7 +18,7 @@
     var d=e.data;
     if(!d||d.type!=='FLUXGK_CONTEXT')return;
     if(window.parent!==window && e.source!==window.parent)return;
-    if(!d.uid||!d.dataPath||!d.firebaseConfig){console.error('[FluxGK] stats: contexto incompleto',d);return;}
+    if(!d.uid||!d.dataPath||!d.cloudConfig){console.error('[FluxGK] stats: contexto incompleto',d);return;}
     window._HUB=d;
     /* idioma definido no hub (persist=false: a escolha e do hub) */
     if(d.lang) FluxGKI18n.setLang(d.lang,false);
@@ -47,7 +46,7 @@
       }catch(err){ console.warn('[FluxGK] stats ctx',err); }
     };
     _applyCtx();
-    if(!_fbReady)_initStatsFB(d.firebaseConfig);
+    if(!_fbReady)_initStatsFB(d.cloudConfig);
   });
   try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:'FLUXGK_MODULE_READY',module:'stats'},'*'); }catch(e){}
   window._renderCtxStrip=function(){
@@ -69,18 +68,17 @@
         document.head.appendChild(s);
       });
     }
-    var B='https://www.gstatic.com/firebasejs/9.23.0/';
-    ld(B+'firebase-app-compat.js')
-      .then(function(){return ld(B+'firebase-auth-compat.js');})
-      .then(function(){return ld(B+'firebase-database-compat.js');})
+    var B='/static/';
+    ld(B+'vendor/pocketbase.umd.js')
+      .then(function(){return ld(B+'pocketbase-adapter.js');})
       .then(function(){
-      if(!firebase.apps.length) firebase.initializeApp(cfg);
-      var db=firebase.database();
+      if(!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+      var db=fluxdb.database();
       window.fbSet=function(p,v){return db.ref(p).set(v);};
       window.fbRemove=function(p){return db.ref(p).remove();};
       window.fbUpdate=function(p,v){return db.ref(p).update(v);};
       window.fbGet=function(p){return db.ref(p).get();};
-      firebase.auth().onAuthStateChanged(function(u){
+      fluxdb.auth().onAuthStateChanged(function(u){
         if(!u){console.error('[FluxGK] stats: sem sessao. Abra pelo hub.');return;}
         if(_fbReady)return; _fbReady=true;
         console.log('[FluxGK] stats: autenticado como',u.uid);
@@ -92,7 +90,7 @@
           else{dot.style.background='#dc2626';if(txt){txt.textContent='offline';txt.style.color='#dc2626';}}
         });
       });
-    }).catch(function(e){console.error("[FluxGK] falha ao carregar Firebase",e);});
+    }).catch(function(e){console.error("[FluxGK] falha ao carregar PocketBase",e);});
   }
   /* A dashboard era desenhada assim que os JOGOS chegavam, mas as
      configuracoes (resultados, momentos, competencias…) vinham depois,
@@ -129,7 +127,7 @@
     db.ref(_SPATH.results).on('value',function(snap){
       var v=_asArr(snap.val());
       if(!v.length) return;
-      /* gravado como [{v:rotulo,k:tipo}] — nomes livres nao podem virar chave no Firebase */
+      /* gravado como [{v:rotulo,k:tipo}] — nomes livres nao podem virar chave no PocketBase */
       ST.results=v.map(function(x){return (x&&x.v!=null)?x.v:x;});
       ST.resultKinds={};
       v.forEach(function(x){ if(x&&x.v!=null) ST.resultKinds[x.v]=x.k||''; });
@@ -357,7 +355,7 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
       
     </nav>
     <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
-  <div id="fb-status" title="Firebase connection" data-i18n-title="st.fbConn" style="display:flex;align-items:center;gap:5px;font-size:10px;color:#555;font-family:var(--mono);">
+  <div id="fb-status" title="PocketBase connection" data-i18n-title="st.fbConn" style="display:flex;align-items:center;gap:5px;font-size:10px;color:#555;font-family:var(--mono);">
     <div id="fb-dot" style="width:6px;height:6px;border-radius:50%;background:#555;transition:background .3s;"></div>
     <span data-i18n="st.connectingShort" id="fb-status-text">connecting</span>
   </div>
@@ -799,7 +797,7 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
 // ═══ STATE ═══════════════════════════════════════════════════════
 const ST = {
   /* comeca vazio: cada clube cadastra os proprios adversarios, competicoes
-     e goleiros na aba Ajustes. Dados de exemplo aqui vazavam para o Firebase
+     e goleiros na aba Ajustes. Dados de exemplo aqui vazavam para o PocketBase
      do clube real assim que o usuario mexia em qualquer item. */
   clubs:[],
   comps:[],
@@ -846,7 +844,7 @@ function newGame(){
 }
 
 // ═══ STORAGE ══════════════════════════════════════════════════════
-// ═══ FIREBASE PERSISTENCE ════════════════════════════════════════
+// ═══ POCKETBASE PERSISTENCE ════════════════════════════════════════
 function persist(){
   if(!window._SPATH||!_SPATH.games){console.warn('[FluxGK] stats: sem contexto do hub');return;}
   /* elenco e competicoes: por temporada */
@@ -1031,7 +1029,7 @@ function uploadClubBadge(clubName, input){
   };
   reader.readAsDataURL(file);
 }
-/* Firebase Realtime Database as vezes devolve arrays como objetos ({0:..,1:..}).
+/* PocketBase (colecao nodes) as vezes devolve arrays como objetos ({0:..,1:..}).
    Sempre normaliza para array de verdade, senao .includes/.push estouram e o
    botao "Add" parece nao fazer nada (o texto fica no campo). */
 function _asArr(v){ return Array.isArray(v) ? v : (v && typeof v==='object' ? Object.values(v) : (v!=null?[v]:[])); }
@@ -2572,9 +2570,7 @@ function exportReport(){
     : '';
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>FluxGK Report — ${title}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:#111;background:#fff;padding:0;}
@@ -2703,7 +2699,7 @@ function exportReport(){
 
 // ═══ BOOT ═════════════════════════════════════════════════════════
 function bootUI(){
-  // Called after Firebase delivers first snapshot
+  // Called after PocketBase delivers first snapshot
   /* fb-loading eliminado */
   document.documentElement.style.setProperty('--accent',ST.accent);
   document.getElementById('nav-club-name').textContent=ST.clubName;
@@ -2721,7 +2717,7 @@ function bootUI(){
   const ah=document.getElementById('set-accent-hex'); if(ah) ah.textContent=ST.accent;
 }
 function boot(){
-  // fbListen started by Firebase module script's DOMContentLoaded listener
+  // fbListen started by PocketBase module script's DOMContentLoaded listener
   // bootUI() will be called from fbListen once first data arrives
 }
 boot();

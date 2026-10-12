@@ -1,0 +1,23 @@
+# FluxGK · nginx que serve o PWA e proxeia o PocketBase
+FROM nginx:1.27-alpine
+
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY nginx/conf.d/ /etc/nginx/conf.d/
+
+# O site inteiro (páginas na raiz do repositório + static/ + assets/)
+COPY index.html mod_planner.html mod_xg.html mod_stats.html mod_minutes.html \
+     mod_video.html mod_data.html mod_periodization.html mod_scouting.html \
+     mod_profile.html tatica3d.html \
+     fluxgk-i18n.js manifest.json manifest.webmanifest \
+     favicon.png icone-180.png icone-512.png \
+     /usr/share/nginx/html/
+COPY diagnostico.html /usr/share/nginx/html/ferramentas/diagnostico.html
+COPY icons/  /usr/share/nginx/html/icons/
+COPY static/ /usr/share/nginx/html/static/
+COPY assets/ /usr/share/nginx/html/assets/
+
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1/health || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

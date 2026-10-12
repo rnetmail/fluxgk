@@ -1,0 +1,56 @@
+/* ============================================================================
+ * FluxGK · fontes LOCAIS — substituem por completo as tags do Google Fonts
+ * (fonts.googleapis.com + fonts.gstatic.com) que estavam nas páginas.
+ *
+ * Uso na página:  <link rel="stylesheet" href="/static/fonts/fonts.css">
+ *
+ * Os pesos aqui não foram escolhidos por gosto: saíram do grep das 12 páginas
+ * feito neste trabalho, pedido a pedido do css2?family=...
+ *   Space Grotesk  300,400,500,600,700  (index, mod_data, mod_planner, mod_profile,
+ *                                        mod_minutes, mod_stats, mod_scouting,
+ *                                        mod_periodization, mod_video)
+ *   JetBrains Mono 400,500,600,700      (600 vem de mod_video)
+ *   Syne           400,500,600,700,800  (mod_xg)
+ *   DM Mono        300,400,500          (mod_xg; o peso 600 pedido na linha 676
+ *                                        do mod_xg NÃO EXISTE na família — a
+ *                                        família só vai até 500, e o navegador
+ *                                        já sintetizava antes)
+ *   DM Sans        400,500,600,700,800  (mod_xg, PDF de exportação)
+ *
+ * Arquivos .woff2 do projeto Fontsource (subset latin), servidos pelo nginx da
+ * stack com cache longo (location /static/fonts/).
+ * ========================================================================== */
+
+/* ------------------------------ Space Grotesk ----------------------------- */
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:300;font-display:swap;src:url('./space-grotesk-latin-300-normal.woff2') format('woff2');}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400;font-display:swap;src:url('./space-grotesk-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:500;font-display:swap;src:url('./space-grotesk-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:600;font-display:swap;src:url('./space-grotesk-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:700;font-display:swap;src:url('./space-grotesk-latin-700-normal.woff2') format('woff2');}
+
+/* ------------------------------ JetBrains Mono ---------------------------- */
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('./jetbrains-mono-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('./jetbrains-mono-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('./jetbrains-mono-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url('./jetbrains-mono-latin-700-normal.woff2') format('woff2');}
+
+/* ---------------------------------- Syne ---------------------------------- */
+@font-face{font-family:'Syne';font-style:normal;font-weight:400;font-display:swap;src:url('./syne-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Syne';font-style:normal;font-weight:500;font-display:swap;src:url('./syne-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Syne';font-style:normal;font-weight:600;font-display:swap;src:url('./syne-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'Syne';font-style:normal;font-weight:700;font-display:swap;src:url('./syne-latin-700-normal.woff2') format('woff2');}
+@font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:swap;src:url('./syne-latin-800-normal.woff2') format('woff2');}
+@font-face{font-family:'Syne';font-style:normal;font-weight:900;font-display:swap;src:url('./syne-latin-800-normal.woff2') format('woff2');} /* 900 pedido no mod_xg; a família vai até 800 */
+
+/* -------------------------------- DM Mono --------------------------------- */
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:300;font-display:swap;src:url('./dm-mono-latin-300-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:400;font-display:swap;src:url('./dm-mono-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:500;font-display:swap;src:url('./dm-mono-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:600;font-display:swap;src:url('./dm-mono-latin-500-normal.woff2') format('woff2');} /* 600 pedido no mod_xg; a família vai até 500 */
+
+/* -------------------------------- DM Sans --------------------------------- */
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('./dm-sans-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url('./dm-sans-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url('./dm-sans-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('./dm-sans-latin-700-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:800;font-display:swap;src:url('./dm-sans-latin-800-normal.woff2') format('woff2');}

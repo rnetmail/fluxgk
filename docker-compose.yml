@@ -1,0 +1,63 @@
+# FluxGK · stack única, usada nas DUAS instâncias do Portainer:
+#   fluxgk-hml  (branch develop) → PORTA_HTTP=3011 → hml.fluxgk.rstecbr.com.br
+#   fluxgk      (branch main)    → PORTA_HTTP=3010 → fluxgk.rstecbr.com.br
+# A diferença entre elas é SÓ a variável de ambiente da stack. Um compose, dois ambientes.
+#
+# DECISÕES, e o porquê de cada uma:
+#  · A porta do host vem de ${PORTA_HTTP} e é ligada em 127.0.0.1 — o Hestia é o
+#    único caminho de fora para dentro (ele faz o proxy + SSL do domínio).
+#  · NÃO há `container_name`: nome fixo impediria HML e PRD de coexistirem no
+#    mesmo Docker (o compose que estava público em public_html fixava
+#    fluxgk-nginx/fluxgk-pocketbase e, com ele, a segunda stack não subiria).
+#  · O PocketBase NÃO publica porta nenhuma: só o nginx fala com ele, pela rede
+#    interna da stack. O painel /_/ é alcançado pelo proxy do nginx.
+#  · `version:` foi removido — obsoleto no Compose v2, que é o que o Portainer usa.
+
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile.pocketbase
+      args:
+        PB_VERSION: ${PB_VERSION:-0.40.5}
+    restart: unless-stopped
+    environment:
+      # Entrada no painel /_/ — é por ali que o administrador reseta a senha de
+      # um goleiro, porque esta stack não tem SMTP (decisão do dono).
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD}
+      # Cifra os dados sensíveis gravados em pb_data. Gere com: openssl rand -hex 16
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:-}
+      TZ: ${TZ:-America/Bahia}
+    volumes:
+      - pb_data:/pb/pb_data
+    expose:
+      - "8090"
+    networks:
+      - interna
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    restart: unless-stopped
+    ports:
+      # Só no loopback: quem publica na internet é o Hestia.
+      - "127.0.0.1:${PORTA_HTTP}:80"
+    environment:
+      TZ: ${TZ:-America/Bahia}
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+    networks:
+      - interna
+
+volumes:
+  pb_data:
+    # O nome real fica prefixado pelo nome da stack (fluxgk_pb_data /
+    # fluxgk-hml_pb_data), então os dados de HML e PRD não se misturam.
+    driver: local
+
+networks:
+  interna:
+    driver: bridge

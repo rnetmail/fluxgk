@@ -6,8 +6,8 @@
 <title>FluxGK</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<script src="/static/pocketbase-adapter.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 /* ── RESET & VARS ─────────────────────────────── */
@@ -898,7 +898,7 @@ window.resetFields=function(){
   if(_fldTab==="post") ST.postFields=[]; else ST.wbFields=defaultWbFields();
   saveFields();
 };
-/* chave segura: sem ponto/cifrao/colchete (restricao do Firebase) e sem colisao */
+/* chave segura: sem ponto/cifrao/colchete (restricao do PocketBase) e sem colisao */
 function mkFieldKey(label,taken){
   var base=(label||"campo").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,24)||"campo";
@@ -910,7 +910,7 @@ let db=null,fbF=null,selPSE=null,editId=null,customPeriods=[],allChartInst=[];
 const PSE_LBL=["1 — Rest","2 — Very easy","3 — Easy","4 — Moderate","5 — Somewhat hard","6 — Hard","7 — Very hard","8 — Very, very hard","9 — Extremely hard","10 — Maximum effort"];
 
 // ── LOCAL STORAGE ──
-// save() is defined in Firebase section (user-scoped to UID)
+// save() is defined in PocketBase section (user-scoped to UID)
 function load(){} // loading handled by loadUserState() after auth
 
 // ── COLOR UTILS ──
@@ -940,8 +940,8 @@ function applyTheme(){
 }
 
 // ════════════════════════════════════════════════════════════
-// FIREBASE — Realtime Database (projeto fluxgksystem, vindo do hub)
-// O hub envia firebaseConfig + dataPath no FLUXGK_CONTEXT.
+// POCKETBASE — Realtime Database (projeto fluxgksystem, vindo do hub)
+// O hub envia cloudConfig + dataPath no FLUXGK_CONTEXT.
 // Mesma origem + mesmo projeto => a sessao do hub e herdada.
 // Dados isolados em users/{uid}/data/{clubId}/{seasonId}/load
 // ════════════════════════════════════════════════════════════
@@ -965,12 +965,12 @@ function scopeRoot(){ return (_base||("users/"+_uid+"/data/_default"))+"/load"; 
 function uPath(p){ return scopeRoot()+"/"+p; }
 function lsKey(){ return "glc_"+scopeRoot(); }
 
-// ── INIT FIREBASE ─────────────────────────────────────────
+// ── INIT POCKETBASE ─────────────────────────────────────────
 async function fbInit(){
   try{
-    const {initializeApp}   = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const authMod           = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-    const rtMod             = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+    const {initializeApp}   = fluxdb.modular;
+    const authMod           = fluxdb.modular;
+    const rtMod             = fluxdb.modular;
     // App PADRAO (sem nome proprio) + mesma config do hub:
     // e o que permite herdar a sessao autenticada do hub.
     const app  = initializeApp(_cfg);
@@ -1002,7 +1002,7 @@ function loadUserState(){
         save();
         // Apply branding immediately
         applyTheme();
-        // Push to Firebase under user's path
+        // Push to PocketBase under user's path
         setTimeout(()=>rtPushAll(),500);
         // Mark old key as migrated
         localStorage.setItem("glcv5_migrated","true");
@@ -1061,7 +1061,7 @@ function _del(path){if(!_db||!_rf||!_uid)return;_rf.remove(_rf.ref(_db,path)).ca
 function rtSaveSession(s){const d={...s};delete d._pk;_set(uPath("sessions/"+s._pk+"/"+s.id),d);}
 function rtDeleteSession(s){_del(uPath("sessions/"+s._pk+"/"+s.id));}
 function rtSavePlayer(p){_upd(uPath("players/"+p.id),{name:p.name,id:p.id});}
-/* status vazio vira null para o Firebase APAGAR o campo na reativacao */
+/* status vazio vira null para o PocketBase APAGAR o campo na reativacao */
 function rtSaveStatus(p){_upd(uPath("players/"+p.id),{
   status:p.status||null, statusDesde:p.statusDesde||null, statusNota:p.statusNota||null});}
 function rtSavePhoto(id,ph){setTimeout(()=>_upd(uPath("players/"+id),{photo:ph}),1000);}
@@ -1582,7 +1582,7 @@ window.submitPost=async function(){
   if(preIdx>=0){
     ST.sessions[preIdx].postId=postId;
     save();
-    /* o vinculo tambem precisa subir: gravando so no navegador, o Firebase
+    /* o vinculo tambem precisa subir: gravando so no navegador, o PocketBase
        devolvia o pre ainda sem postId e ele reaparecia como "aberto",
        parecendo um pre duplicado do mesmo treino */
     rtSaveSession(ST.sessions[preIdx]);
@@ -1611,7 +1611,7 @@ function _wb10to5(v){
   return n;
 }
 /* Reparo do vinculo pre/pos.
-   O postId era gravado so no navegador e nunca subia para o Firebase, entao
+   O postId era gravado so no navegador e nunca subia para o PocketBase, entao
    pares antigos ficaram com o pos apontando para o pre, mas o pre sem o
    postId de volta — e o pre reaparecia como PENDING ao lado da sessao ja
    fechada. Aqui refazemos o elo pelo preId do pos-treino. */
@@ -1702,7 +1702,7 @@ window.deleteSession=function(id){
   if(!confirm(TX("data.msg.deleteConfirm")))return;
   ST.sessions=ST.sessions.filter(x=>x.id!==id);
   /* Toda mudanca no par pre/pos tambem precisa subir. Antes so a sessao
-     apagada ia para o Firebase e a outra metade voltava no proximo sync:
+     apagada ia para o PocketBase e a outra metade voltava no proximo sync:
      o pre reabria sozinho ou sobrava um pos orfao. */
   // If deleting a post, reopen the linked pre session
   if(s.type==="post"&&s.preId){
@@ -1951,7 +1951,7 @@ window.addTrainingType=function(){
   ST.trainingTypes.push(t);
   save();renderTypeSelects();
   showToast('"'+t+'" added!');
-  // Sync to Firebase (scoped to the active club+season)
+  // Sync to PocketBase (scoped to the active club+season)
   if(_db&&_rf&&_uid){
     _rf.set(_rf.ref(_db,uPath("trainingTypes")),ST.trainingTypes).catch(function(){});
   }
@@ -2581,7 +2581,7 @@ function today2(){return new Date().toISOString().split("T")[0];}
   buildPSE();
   // Hide context bar until a goalkeeper is selected
   const _cb=document.getElementById("ctxBar");if(_cb)_cb.style.display="none";
-  // Init Firebase — auth state listener handles everything after
+  // Init PocketBase — auth state listener handles everything after
   try{ migrateWellbeingScale(); repairPrePostLinks(); }catch(e){ console.warn("wb migrate:",e); }
   try{ buildPreFields(); buildPostFields(); renderFieldEditor(); }catch(e){ console.warn("fields:",e); }
   applyTheme();renderAll();
@@ -2597,7 +2597,7 @@ function today2(){return new Date().toISOString().split("T")[0];}
     if(!ev.data||ev.data.type!=="FLUXGK_CONTEXT")return;
     var d=ev.data;
     // Contexto completo e obrigatorio (mesmo padrao de xg/stats/planner)
-    if(!d.uid||!d.dataPath||!d.firebaseConfig){
+    if(!d.uid||!d.dataPath||!d.cloudConfig){
       console.error("[FluxGK] Load Control: contexto incompleto",d);
       showToast(TX("data.msg.noContext"),"err");
       return;
@@ -2606,14 +2606,14 @@ function today2(){return new Date().toISOString().split("T")[0];}
     // Escopo isolado por clube+temporada enviado pelo hub
     // (users/{uid}/data/{clubId}/{seasonId}/load)
     _base=d.dataPath;
-    _cfg =d.firebaseConfig;
+    _cfg =d.cloudConfig;
     /* idioma definido no hub (persist=false: a escolha e do hub) */
     if(d.lang) FluxGKI18n.setLang(d.lang,false);
     console.log("[FluxGK] Load Control scope =",scopeRoot(),"| projeto:",_cfg.projectId);
     var p=d.profile||{};
     if(typeof ST!=="undefined"&&ST.brand){if(p.clubName)ST.brand.name=p.clubName;if(p.clubColor)ST.brand.color=p.clubColor;if(p.clubBadge)ST.brand.logo=p.clubBadge;}
     if(typeof applyTheme==="function")applyTheme();
-    /* o hub re-envia o contexto ao trocar de idioma: nao reinicializa o Firebase */
+    /* o hub re-envia o contexto ao trocar de idioma: nao reinicializa o PocketBase */
     if(_fbStarted) return;
     _fbStarted=true;
     fbInit().then(function(ok){

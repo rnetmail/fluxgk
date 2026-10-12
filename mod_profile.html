@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GK Profile · FluxGK</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
 /* =============================================================
    Tokens do FluxGK. Os mesmos nomes dos outros módulos, para que
@@ -2006,7 +2004,7 @@ Object.assign(T, {
 
 /* ===== fdb.js ===== */
 /* =============================================================
-   CAMADA DE DADOS — FluxGK / Firebase Realtime Database
+   CAMADA DE DADOS — FluxGK / PocketBase (colecao nodes)
    -------------------------------------------------------------
    Convenções do hub, seguidas à risca:
 
@@ -2027,9 +2025,8 @@ Object.assign(T, {
   'use strict';
 
   const SDK = [
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
+    '/static/vendor/pocketbase.umd.js',
+    '/static/pocketbase-adapter.js'
   ];
 
   function loadScript(src) {
@@ -2082,12 +2079,12 @@ Object.assign(T, {
     async init(cfg, ctxUid, dataPath) {
       uid = ctxUid; base = dataPath;
       /* o SDK pode já estar na página — outro módulo, ou o próprio hub */
-      if (!window.firebase) { for (const s of SDK) await loadScript(s); }
-      if (!window.firebase) throw new Error('Firebase não carregou.');
-      if (!firebase.apps.length) firebase.initializeApp(cfg);
-      db = firebase.database();
+      if (!window.fluxdb) { for (const s of SDK) await loadScript(s); }
+      if (!window.fluxdb) throw new Error('PocketBase não carregou.');
+      if (!fluxdb.apps.length) fluxdb.initializeApp(cfg);
+      db = fluxdb.database();
       return new Promise(res => {
-        firebase.auth().onAuthStateChanged(u => {
+        fluxdb.auth().onAuthStateChanged(u => {
           if (!u) { console.error('[perfil] sem sessão — entre pelo hub.'); return; }
           ready = true;
           flush();
@@ -2168,7 +2165,7 @@ Object.assign(T, {
 /* =============================================================
    ADAPTADOR
    Expõe ao aplicativo a mesma interface que o SemeyDB expunha,
-   mas por trás está o Firebase do FluxGK. As telas não sabem
+   mas por trás está o PocketBase do FluxGK. As telas não sabem
    que a base mudou.
 
    Duas diferenças de propriedade, e elas são deliberadas:
@@ -2181,7 +2178,7 @@ Object.assign(T, {
 (function () {
   'use strict';
 
-  /* espelho local mantido pelos listeners do Firebase */
+  /* espelho local mantido pelos listeners do PocketBase */
   const cache = { roster: [], profiles: {}, assessments: {}, logs: {}, model: null };
   let onChange = () => { };
 
@@ -2251,7 +2248,7 @@ Object.assign(T, {
     mode: 'flux',
     cache,
 
-    /* ligado pelo boot: repassa cada mudança do Firebase para a tela */
+    /* ligado pelo boot: repassa cada mudança do PocketBase para a tela */
     bind(fn) { onChange = fn || (() => { }); },
     notify() { onChange(); },
 
@@ -4066,7 +4063,7 @@ Object.assign(T, {
   }
 
   /* Identifica o campo em foco de um jeito que sobreviva ao innerHTML: o render
-     reconstroi a tela inteira e, quando o Firebase devolvia o que acabou de ser
+     reconstroi a tela inteira e, quando o PocketBase devolvia o que acabou de ser
      salvo, o cursor era perdido no meio da digitacao. */
   function focoAtual() {
     const el = document.activeElement;
@@ -5871,7 +5868,7 @@ Object.assign(T, {
     shell();
     $('#app').innerHTML = `<div class="empty">${esc(t('loading'))}</div>`;
 
-    await FDB.init(ctx.firebaseConfig, ctx.uid, ctx.dataPath);
+    await FDB.init(ctx.cloudConfig, ctx.uid, ctx.dataPath);
 
     const cache = FluxAdapter.cache;
     let first = true;
@@ -5920,7 +5917,7 @@ Object.assign(T, {
     var d = e.data;
     if (!d || d.type !== 'FLUXGK_CONTEXT') return;
     if (window.parent !== window && e.source !== window.parent) return;
-    if (!d.uid || !d.dataPath || !d.firebaseConfig) {
+    if (!d.uid || !d.dataPath || !d.cloudConfig) {
       console.error('[FluxGK] perfil: contexto incompleto', d);
       var el = document.getElementById('app');
       if (el) el.innerHTML = '<div style="padding:60px 20px;text-align:center;color:#737373">'

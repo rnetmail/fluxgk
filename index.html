@@ -17,9 +17,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FluxGK">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--ink:#0a0a0a;--paper:#fafaf7;--mute:#737373;--faint:#e5e5e5;--green:#16a34a;--red:#dc2626;--amber:#E8901A}
@@ -311,21 +309,18 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 
 <script>
 /* ============================================================
-   >>>>>>>>>>  CONFIRA ESTA URL  <<<<<<<<<<
-   Console do Firebase > fluxgksystem > Realtime Database.
-   A URL aparece no topo da arvore de dados. Cole aqui exatamente.
+   BACKEND: PocketBase da propria stack, na MESMA origem.
+   O nginx proxeia /api/ e /api/realtime para o container do
+   PocketBase; o painel do administrador fica em /_/ (e por ele
+   que se reseta a senha de um usuario: esta stack nao tem SMTP).
+   Nao existe mais projeto no Google: nada de apiKey nem databaseURL.
    ============================================================ */
 console.log('%c[FluxGK] hub v3.1 — clubes, temporadas (rename+delete)','color:#E8901A;font-weight:bold');
-var DB_URL = "https://fluxgksystem-default-rtdb.firebaseio.com";
+var DB_URL = "";                 /* "" = mesma origem (o nginx da stack) */
 
 var FBC={
-  apiKey:"AIzaSyAJcwMEwbpUvf2mrY9ej1xz6e0Ma_z65yY",
-  authDomain:"fluxgksystem.firebaseapp.com",
-  databaseURL:DB_URL,
-  projectId:"fluxgksystem",
-  storageBucket:"fluxgksystem.firebasestorage.app",
-  messagingSenderId:"663122789948",
-  appId:"1:663122789948:web:f5a8f9b19fc33870df6539"
+  backend:"pocketbase",
+  url:DB_URL                     /* vazio = window.location.origin */
 };
 
 var PRESETS=['#0a0a0a','#1e3a5f','#7c3aed','#0f6e56','#b91c1c','#c2410c','#1d4ed8','#0e7490','#374151','#713f12'];
@@ -393,7 +388,7 @@ function doLogin(){
   var er=document.getElementById('lerr');var bt=document.getElementById('lbtn');
   if(!em||!pw){er.textContent=TX('hub.msg.enterCreds');return;}
   er.textContent='';bt.disabled=true;bt.textContent=TX('hub.signingIn');
-  var ps=rm?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION;
+  var ps=rm?fluxdb.auth.Auth.Persistence.LOCAL:fluxdb.auth.Auth.Persistence.SESSION;
   _auth.setPersistence(ps).then(function(){return _auth.signInWithEmailAndPassword(em,pw);})
   .catch(function(e){bt.disabled=false;bt.textContent=TX('common.signIn');var m={'auth/user-not-found':TX('hub.msg.noAccount'),'auth/wrong-password':TX('hub.msg.wrongPass'),'auth/invalid-email':TX('hub.msg.invalidEmail'),'auth/too-many-requests':TX('hub.msg.tooMany'),'auth/invalid-credential':TX('hub.msg.invalidCred')};er.textContent=m[e.code]||e.message;});
 }
@@ -914,7 +909,7 @@ function ctxPayload(){
   return {
     type:'FLUXGK_CONTEXT',
     uid:APP.uid,
-    firebaseConfig:FBC,
+    cloudConfig:FBC,
     dataPath:dataPath(),                     /* onde o modulo grava */
     lang:FluxGKI18n.getLang(),               /* idioma escolhido no hub */
     club:{id:APP.active.clubId,name:m.name||'',abbr:m.abbr||'',color:m.color||'#0a0a0a',badge:c.badge||''},
@@ -964,14 +959,10 @@ function closeModule(){ if(_fsEl()){var exit=document.exitFullscreen||document.w
 function ldScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
 async function boot(){
   try{
-    await ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-    await Promise.all([
-      ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'),
-      ldScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js')
-    ]);
-    firebase.initializeApp(FBC);
-    _auth=firebase.auth();
-    _rtdb=firebase.database();
+    await ldScript('/static/pocketbase-adapter.js');
+    fluxdb.initializeApp(FBC);
+    _auth=fluxdb.auth();
+    _rtdb=fluxdb.database();
     _auth.onAuthStateChanged(async function(u){
       if(u){
         APP.uid=u.uid;
