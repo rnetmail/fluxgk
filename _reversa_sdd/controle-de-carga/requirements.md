@@ -25,7 +25,7 @@ histórico e relatórios em PDF. É **dono do elenco** usado pelo hub e pelo Per
 - RN-10 **ACWR** = média das UA das últimas 7 **datas com treino** / média das últimas 28; exige ≥ 4 pós-treinos; faixa de referência 0,8–1,3. **Decisão do dono (D-03):** manter assim, com opção de calcular por dias corridos ativável **só pelo Administrador**. 🟢
 - RN-11 Tipos de treino da nuvem e do navegador se **somam**. 🟢
 - RN-12 O navegador guarda o estado inteiro (`glc_<raiz>`); sem espaço, guarda versão enxuta (sem fotos, 150 últimos registros, logo vazio); ainda sem espaço, descarta a cópia. 🟢
-- 🔴 RN-13 Ao abrir, o módulo **envia ao servidor toda a cópia do navegador antes de ler a nuvem** (`rtPushAll`). Cada jogador é regravado inteiro, o que apaga no servidor foto e status que a cópia local não tenha; registros alterados em outro aparelho voltam à versão local.
+- 🟢 RN-13 Ao abrir, o módulo **lê a nuvem e concilia registro a registro** (`fluxgkReconciliarCarga`): nos dois lados vence o mais recente (`mt`/`ts`, D-11); só aqui sem `_sync` sobe; só aqui com `_sync` foi apagado em outro aparelho e sai; só na nuvem com lápide é apagado lá. Goleiro nunca é regravado inteiro. **Corrigido em 13/10** — antes, o `rtPushAll` enviava a cópia do navegador antes de ler, desfazia alterações de outro aparelho e apagava foto e status.
 - 🔴 RN-14 Descanso e falta hoje contam como sessão no painel do hub; **decisão do dono (D-01, D-08):** descanso conta como descanso e falta como categoria própria.
 
 ## Requisitos Funcionais

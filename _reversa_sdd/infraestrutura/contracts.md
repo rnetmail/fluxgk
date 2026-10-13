@@ -88,4 +88,4 @@ saber se o app funciona, use `/api/health`.
 ## 7. O que o contrato não garante hoje
 - 🟢 `POST /api/collections/users/records` está aberto a qualquer um (`createRule = ''`); com corpo vazio responde 400 por validação, não 403.
 - 🟢 `manifest.webmanifest` sai como `application/octet-stream`: o `mime.types` do nginx não conhece a extensão. Navegadores aceitam, mas o tipo certo é `application/manifest+json` (e só com ele o gzip configurado se aplica).
-- 🟡 Tempo real atravessando o Hestia: 300 s de leitura e buffer padrão na frente dos 24 h do contêiner (ver `design.md`, Riscos).
+- 🟢 Tempo real atravessando o Hestia: o nginx da stack responde `X-Accel-Buffering: no` no `/api/realtime` (desde 13/10; antes o Hestia segurava o SSE em buffer). Leitura de 300 s no Hestia: reconexão depois de 5 min parado.

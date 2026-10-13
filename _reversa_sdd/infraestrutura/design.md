@@ -180,6 +180,6 @@ PocketBase), `storage/` (arquivos, hoje sem uso) e `types.d.ts`. 🟢
 - 🟢 Regras de cache para `sw.js` sem service worker no app; dois manifestos (`manifest.json` com ícones de `icons/` e retrato fixo; `manifest.webmanifest`, o que as páginas usam).
 - 🟢 HTML sem regra de cache e com `?v=<timestamp>` nos módulos (DT-09).
 - 🟢 `CNAME` com `fluxgk.com` é resto do GitHub Pages; não tem efeito na stack.
-- 🟡 **Hestia com 300 s de leitura e buffer ligado** na frente do `/api/realtime`: o nginx do contêiner segura 24 h, mas o Hestia corta antes. Se o PocketBase mandar `X-Accel-Buffering: no` e o SDK reconectar, o efeito é só reconexão a cada 5 min parado; não medido.
+- 🟢 **Buffer do Hestia no `/api/realtime` — confirmado e corrigido em 13/10:** pelo domínio chegavam 0 bytes do SSE (direto na stack, o `PB_CONNECT` chega na hora). O tempo real nunca funcionou pelo domínio, e cada página esperava ~15 s o SDK desistir antes de carregar os dados. Correção: `X-Accel-Buffering: no` no `location = /api/realtime` do nginx da stack; o CI exige o `PB_CONNECT` pelo domínio em até 5 s. Os 300 s de leitura do Hestia continuam (reconexão depois de 5 min parado).
 - 🟡 Limite de envio de 512 MB pensado para vídeo, mas os vídeos ficam no computador (ADR 005); nenhuma rota recebe arquivo hoje.
 - 🟢 Construção só para `linux_amd64` (`ARG PB_ARCH=linux_amd64` no `Dockerfile.pocketbase`).

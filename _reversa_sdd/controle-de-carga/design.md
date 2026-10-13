@@ -100,9 +100,9 @@ No navegador, cada registro ganha `_pk` (id do goleiro), retirado antes de grava
 - Falhas de `_set`/`_upd` só no console + ponto vermelho; `_del` engole o erro. 🟢
 
 ## Riscos e Lacunas
-- 🔴 **`rtPushAll` antes de ler:** desfaz no servidor o que outro aparelho mudou; na fluxdb 1.0 eram centenas a milhares de requisições em sequência a cada abertura; na 1.1, uma por registro, em paralelo, o que ainda é um registro por item a cada abertura.
-- 🔴 **Foto e status apagados:** `rtPushAll` grava `players/<id> = {name, id}`; pela semântica do adaptador, isso **apaga os nós filhos** `players/<id>/photo`, `status`, `statusDesde`, `statusNota` gravados por `_upd`. Só os que a cópia local tem são regravados; se a cópia foi reduzida (sem fotos), as fotos somem do servidor.
-- 🔴 **Exclusões e edições de outro aparelho não chegam:** a fusão só acrescenta ids que faltam (`:1150-1157`); um registro apagado em outro aparelho continua aqui e é **reenviado** na próxima abertura (ressuscita); um registro editado lá nunca atualiza aqui.
+- 🟢 ~~**`rtPushAll` antes de ler:**~~ corrigido em 13/10 (reconciliação; ver RN-13 e `tools/test-carga.mjs`).
+- 🟢 ~~**Foto e status apagados:**~~ corrigido em 13/10 (reconciliação; ver RN-13 e `tools/test-carga.mjs`).
+- 🟢 ~~**Exclusões e edições de outro aparelho não chegam:**~~ corrigido em 13/10 (reconciliação; ver RN-13 e `tools/test-carga.mjs`).
 - 🟢 Listener no nó `load` inteiro, com fotos, a cada mudança.
 - 🟢 Contexto aceito sem conferir `e.source`.
 - 🟡 Migração `glcv5`: dados antigos do navegador vão para a conta e o clube de quem abrir primeiro (computador compartilhado).

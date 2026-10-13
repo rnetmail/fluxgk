@@ -73,22 +73,22 @@
 
 ### Correções
 
-- [ ] T-13, **Sincronização correta ao abrir:** remover o `rtPushAll` incondicional; ler a nuvem primeiro; enviar só o que foi alterado localmente e ainda não confirmado (fila de pendências com `ts`)
+- [x] T-13, **Sincronização correta ao abrir:** remover o `rtPushAll` incondicional; ler a nuvem primeiro; enviar só o que foi alterado localmente e ainda não confirmado (fila de pendências com `ts`) — **feito em 13/10** (`fluxgkReconciliarCarga`: concilia a cada leitura, vence o mais recente, `_sync` e lápides; `tools/test-carga.mjs` no CI; ponta a ponta em HML: foto e status preservados, registro local subiu, registro da nuvem chegou)
   - Origem no legado: `rtPushAll` (`:1072-1097`), arranque (`:2629-2632`)
   - Critério de pronto: Critério de Aceitação 6; abrir o módulo sem pendências faz zero gravações
   - Confiança: 🟢
 
-- [ ] T-14, **Fusão completa:** registros e jogadores do servidor substituem a versão local (ou vence o `ts` mais recente); exclusões no servidor removem do local
+- [x] T-14, **Fusão completa:** registros e jogadores do servidor substituem a versão local (ou vence o `ts` mais recente); exclusões no servidor removem do local — **feito em 13/10** junto com T-13 (exclusões e edições de outro aparelho chegam; vence o mais recente, D-11)
   - Origem no legado: `rtListen` (`:1121-1157`)
   - Critério de pronto: apagar no aparelho B remove no A; editar no B atualiza no A
   - Confiança: 🟢
 
-- [ ] T-15, **Foto e status sem apagar um ao outro:** gravar `players/<id>` com `update` de campos no mesmo nó (`{name}`, `{photo}`, `{status, statusDesde, statusNota}`), nunca `set` do nó com subset de campos
+- [x] T-15, **Foto e status sem apagar um ao outro:** gravar `players/<id>` com `update` de campos no mesmo nó (`{name}`, `{photo}`, `{status, statusDesde, statusNota}`), nunca `set` do nó com subset de campos — **feito em 13/10**: a reconciliação nunca regrava o goleiro inteiro; `rtSavePlayer` usa `update` de campos
   - Origem no legado: `rtSavePlayer` (`:1063`), `rtSaveStatus` (`:1065-1066`), `rtSavePhoto` (`:1067`), `rtPushAll` (`:1076-1083`)
   - Critério de pronto: mudar status não apaga foto; renomear não apaga status
   - Confiança: 🟢
 
-- [ ] T-16, Exclusão confirmada: `_del` com tratamento de erro e fila de reenvio
+- [x] T-16, Exclusão confirmada: `_del` com tratamento de erro e fila de reenvio — **feito em 13/10**: lápide guardada até a nuvem confirmar a exclusão; reenviada na próxima leitura
   - Origem no legado: `_del` (`:1059`)
   - Critério de pronto: exclusão sem rede é refeita quando a rede volta e não ressuscita
   - Confiança: 🟢
