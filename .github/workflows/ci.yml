@@ -1,0 +1,98 @@
+# FluxGK · CI e deploy em HML.
+#
+# Fluxo (decisão do dono, 13/10/2026): todo ajuste, melhoria e desenvolvimento entra em `develop`,
+# que É o ambiente de homologação. Push em `develop` → verificação → o Portainer reimplanta a stack
+# `fluxgk-hml` (hml.fluxgk.rstecbr.com.br, base de dados própria). Produção (`main`, stack `fluxgk`)
+# só muda pelo workflow `promover`, que numera a versão 1.<ano>.<seq>.
+#
+# O deploy é o webhook da stack no Portainer (secret PORTAINER_WEBHOOK_HML): ele clona o branch de novo
+# e reconstrói as imagens. Para saber que o commit certo está no ar, este job constrói a mesma imagem do
+# nginx e lê a impressão digital do conteúdo (BUILD); o deploy só passa quando /versao.json de HML
+# mostra essa mesma impressão. (O Portainer CE não repassa variáveis pela URL do webhook.)
+name: ci
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      build: ${{ steps.build.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Versão no formato 1.<ano>.<seq>
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          echo "VERSION=$V"
+          echo "$V" | grep -Eq '^1\.20[0-9]{2}\.[0-9]{3}$' || { echo "::error::VERSION fora do formato 1.<ano>.<seq> (ex.: 1.2026.001)"; exit 1; }
+
+      - name: Sintaxe de todo JavaScript (páginas e scripts soltos)
+        run: node tools/checa-paginas.mjs
+
+      - name: Compose válido
+        run: PORTA_HTTP=3999 docker compose config -q
+
+      - name: Construir as imagens
+        run: PORTA_HTTP=3999 docker compose build
+
+      - name: Impressão digital do que vai ao ar
+        id: build
+        run: |
+          docker build -q -f Dockerfile.nginx -t fluxgk-nginx-ci .
+          B=$(docker run --rm --entrypoint cat fluxgk-nginx-ci /etc/fluxgk/BUILD)
+          echo "build=$B"; echo "build=$B" >> "$GITHUB_OUTPUT"
+
+      - name: Fumaça do adaptador contra um PocketBase limpo
+        run: |
+          docker build -q -f Dockerfile.pocketbase -t fluxgk-pb-ci .
+          docker run -d --name pb -p 127.0.0.1:8090:8090 \
+            -e PB_ADMIN_EMAIL=ci@ci.local -e PB_ADMIN_PASSWORD=ci-senha-123456 fluxgk-pb-ci
+          for i in $(seq 40); do curl -sf http://127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
+          PB_URL=http://127.0.0.1:8090 node tools/smoke-adapter.mjs
+
+      - name: Logs do PocketBase (se falhou)
+        if: failure()
+        run: docker logs pb 2>&1 | tail -80 || true
+
+  hml:
+    needs: verificar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-hml
+      cancel-in-progress: false
+    environment:
+      name: hml
+      url: https://hml.fluxgk.rstecbr.com.br
+    steps:
+      - name: Reimplantar fluxgk-hml no Portainer
+        env:
+          WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK_HML }}
+        run: |
+          test -n "$WEBHOOK" || { echo "::error::falta o secret PORTAINER_WEBHOOK_HML"; exit 1; }
+          curl -fsS -X POST "${WEBHOOK}"
+
+      - name: Esperar HML com esta construção
+        env:
+          B: ${{ needs.verificar.outputs.build }}
+        run: |
+          test -n "$B" || { echo "::error::sem impressão digital do job verificar"; exit 1; }
+          for i in $(seq 60); do
+            J=$(curl -fsS "https://hml.fluxgk.rstecbr.com.br/versao.json?t=$(date +%s)" || true)
+            echo "$J" | grep -q "\"build\":\"${B}\"" && { echo "no ar: $J"; break; }
+            sleep 10
+          done
+          echo "$J" | grep -q "\"build\":\"${B}\"" || { echo "::error::HML não mostrou o build $B de ${GITHUB_SHA} em 10 min (último: $J)"; exit 1; }
+          echo "### HML: ${GITHUB_SHA::7} no ar (build $B)" >> "$GITHUB_STEP_SUMMARY"
+          curl -fsS https://hml.fluxgk.rstecbr.com.br/api/health
