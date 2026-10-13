@@ -1285,6 +1285,7 @@ function recTab(t){
 }
 function cancelEditGame(){
   if(!confirm(TX('st.msg.discard'))) return;
+  apagarRascunho();
   CUR=newGame(); editingGameId=null; lastShotGk=null;
   clearShotForm(); clearOffForm(); recTab('meta');
   populateRecordSelects();
@@ -1294,6 +1295,7 @@ function navToRecord(){
   // If currently editing, warn before discarding
   if(editingGameId!==null&&CUR.shots.length>0){
     if(!confirm(TX('st.discardEditing'))) return;
+    apagarRascunho();
     CUR=newGame(); editingGameId=null; lastShotGk=null;
     clearShotForm(); clearOffForm(); recTab('meta');
   }
@@ -1318,6 +1320,7 @@ function recSyncMeta(){
   /* o seletor vazio significa "siga o placar"; preenchido, voce mandou */
   if(g('rec-out')) CUR.outcome=g('rec-out').value||'';
   recPintaResultado();
+  guardarRascunho();
 }
 /* resultado deduzido do placar — '' quando nao ha placar */
 function outcomeDoPlacar(g){
@@ -1362,6 +1365,59 @@ function clearShotForm(){
   editShotIdx=null; updateShotNum();
   populateShotGkSelect(preservedGk);
 }
+
+/* ═══ RASCUNHO DO JOGO AO VIVO (D-16) ══════════════════════════════
+   O jogo em andamento (CUR) vivia so na memoria: recarregar a pagina, a bateria acabar ou o navegador
+   fechar perdia todos os lances. Agora vai para o navegador a cada lance e para a nuvem no maximo uma
+   vez por minuto (dataPath/stats/rascunho), para continuar em outro aparelho. Ao abrir, um rascunho
+   com lances e oferecido de volta; salvar ou descartar o jogo apaga o rascunho. */
+var _rascT=null, _rascNuvemEm=0;
+function _rascChave(){ return (window._SPATH&&_SPATH.games) ? 'fluxgk_stats_rascunho::'+_SPATH.games : null; }
+function _rascCaminho(){ return (window._SPATH&&_SPATH.games) ? _SPATH.games.replace(/\/games$/,'/rascunho') : null; }
+function _rascTemConteudo(c){ return !!(c && ((c.shots&&c.shots.length) || (_asArr(c.offActions).length))); }
+function guardarRascunho(){
+  const k=_rascChave(); if(!k) return;
+  if(!_rascTemConteudo(CUR)){ return; }
+  const r={cur:CUR, editingGameId:editingGameId, em:Date.now()};
+  try{ localStorage.setItem(k, JSON.stringify(r)); }catch(e){ console.warn('[FluxGK] stats: rascunho local nao coube', e); }
+  const falta = 60000 - (Date.now() - _rascNuvemEm);
+  if(_rascT) return;                                   /* ja agendado: leva o estado mais novo */
+  _rascT=setTimeout(function(){
+    _rascT=null; _rascNuvemEm=Date.now();
+    const cam=_rascCaminho(); if(!cam||!window.fbSet) return;
+    let atual=null; try{ atual=JSON.parse(localStorage.getItem(_rascChave())||'null'); }catch(e){}
+    if(atual) window.fbSet(cam, atual).catch(function(e){ console.warn('[FluxGK] stats: rascunho na nuvem falhou', e); });
+  }, Math.max(0, falta));
+}
+function apagarRascunho(){
+  const k=_rascChave(); if(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  if(_rascT){ clearTimeout(_rascT); _rascT=null; }
+  const cam=_rascCaminho(); if(cam&&window.fbRemove) window.fbRemove(cam).catch(function(){});
+}
+async function oferecerRascunho(){
+  if(_rascTemConteudo(CUR)) return;                   /* ja ha um jogo na tela */
+  let local=null, nuvem=null;
+  try{ local=JSON.parse(localStorage.getItem(_rascChave())||'null'); }catch(e){}
+  try{ const cam=_rascCaminho(); if(cam&&window.fbGet){ const s=await window.fbGet(cam); nuvem=s&&s.val(); } }catch(e){}
+  const r=[local,nuvem].filter(function(x){return x&&_rascTemConteudo(x.cur);}).sort(function(a,b){return (b.em||0)-(a.em||0);})[0];
+  if(!r) return;
+  const n=(r.cur.shots||[]).length, opp=r.cur.opponent||'—';
+  const msg=_txf('st.msg.restoreDraft','There is an unsaved game in progress ({n} shots, vs {opp}). Resume it?')
+    .split('{n}').join(n).split('{opp}').join(opp);
+  if(!confirm(msg)){ apagarRascunho(); return; }
+  CUR=r.cur; CUR.shots=CUR.shots||[]; CUR.offActions=_asArr(CUR.offActions);
+  editingGameId=(r.editingGameId===undefined)?null:r.editingGameId;
+  lastShotGk=CUR.shots.length?CUR.shots[CUR.shots.length-1].gk||null:null;
+  showPage('record');
+  const set=function(id,v){const el=document.getElementById(id); if(el) el.value=v;};
+  set('rec-date',CUR.date||''); set('rec-opp',CUR.opponent||''); set('rec-comp',CUR.competition||'');
+  set('rec-link',CUR.shotsLink||''); set('rec-offlink',CUR.offLink||''); set('rec-ha',CUR.homeAway||'home');
+  set('rec-venue',CUR.venue||''); set('rec-gf',CUR.gf==null?'':CUR.gf); set('rec-ga',CUR.ga==null?'':CUR.ga);
+  set('rec-out',CUR.outcome||'');
+  try{ recPintaResultado(); }catch(e){}
+  recTab('shots'); renderShotsList(); updateShotNum();
+}
+
 function saveShot(){
   if(!SF.result){alert(TX('st.msg.pickResult'));return;}
   const gkVal=document.getElementById('sf-gk').value||SF.gk||null;
@@ -1369,6 +1425,7 @@ function saveShot(){
   const shot={...SF, minute:document.getElementById('sf-minute').value, gk:gkVal};
   if(editShotIdx!==null) CUR.shots[editShotIdx]=shot;
   else CUR.shots.push(shot);
+  guardarRascunho();
   try{ clearShotForm(); }catch(e){ console.error('clearShotForm:',e); }
   renderShotsList(); updateShotNum();
 }
@@ -1417,7 +1474,7 @@ function editShot(idx){
   updateShotNum();
 }
 function delShot(idx){
-  CUR.shots.splice(idx,1); renderShotsList(); updateShotNum();
+  CUR.shots.splice(idx,1); guardarRascunho(); renderShotsList(); updateShotNum();
 }
 
 // ═══ AÇÕES OFENSIVAS ══════════════════════════════════════════════
@@ -1478,6 +1535,7 @@ function saveOffAction(){
   const act={...OA, minute:document.getElementById('off-minute').value, gk:gkVal};
   if(editOaIdx!==null) CUR.offActions[editOaIdx]=act;
   else CUR.offActions.push(act);
+  guardarRascunho();
   clearOffForm(); renderOffList(); updateOffNum();
 }
 function renderOffList(){
@@ -1517,7 +1575,7 @@ function editOffAction(idx){
 }
 function delOffAction(idx){
   if(!Array.isArray(CUR.offActions)) CUR.offActions=_asArr(CUR.offActions);
-  CUR.offActions.splice(idx,1); renderOffList(); updateOffNum();
+  CUR.offActions.splice(idx,1); guardarRascunho(); renderOffList(); updateOffNum();
 }
 function buildReview(){
   const s=calcStats(CUR.shots);
@@ -1590,6 +1648,7 @@ function saveGame(){
     const idx=ST.games.findIndex(g=>g.id==editingGameId);
     if(idx>=0) ST.games[idx]=gameToSave; else ST.games.push(gameToSave);
     persistGame(gameToSave);
+    apagarRascunho();
     const shotCount=CUR.shots.length;
     CUR=newGame(); editingGameId=null; lastShotGk=null; clearShotForm(); clearOffForm(); recTab('meta');
     populateRecordSelects(); populateAllSelects();
@@ -1598,6 +1657,7 @@ function saveGame(){
     const gameToSave={...CUR,id:Date.now()};
     ST.games.push(gameToSave);
     persistGame(gameToSave);
+    apagarRascunho();
     const shotCount=gameToSave.shots.length;
     CUR=newGame(); lastShotGk=null; clearShotForm(); clearOffForm(); recTab('meta');
     populateRecordSelects(); populateAllSelects();
@@ -2750,6 +2810,8 @@ function bootUI(){
   const cn=document.getElementById('set-club-name'); if(cn) cn.value=ST.clubName;
   const ac=document.getElementById('set-accent'); if(ac) ac.value=ST.accent;
   const ah=document.getElementById('set-accent-hex'); if(ah) ah.textContent=ST.accent;
+  /* jogo ao vivo nao salvo (pagina recarregada, bateria, outro aparelho): oferece de volta */
+  setTimeout(function(){ oferecerRascunho().catch(function(e){ console.warn('[FluxGK] stats: rascunho', e); }); }, 300);
 }
 function boot(){
   // fbListen started by PocketBase module script's DOMContentLoaded listener

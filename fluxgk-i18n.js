@@ -660,6 +660,7 @@
     'st.pdf.footerLong':'FluxGK · Data-Driven GK Analysis Platform',
     /* avisos */
     'st.msg.discard':'Discard changes and go back to History?',
+    'st.msg.restoreDraft':'There is an unsaved game in progress ({n} shots, vs {opp}). Resume it?',
     'st.msg.dateOpp':'Date and Opponent are required.',
     'st.msg.pickResult':'Please select a Result.',
     'st.msg.dateOppBack':'Date and Opponent required. Go back to Game Info.',
@@ -1729,6 +1730,7 @@
     'st.pdf.footerLong':'FluxGK · Plataforma de Análise de Goleiros com Dados',
     /* avisos */
     'st.msg.discard':'Descartar alterações e voltar ao Histórico?',
+    'st.msg.restoreDraft':'Há um jogo em andamento que não foi salvo ({n} finalizações, contra {opp}). Retomar?',
     'st.msg.dateOpp':'Data e Adversário são obrigatórios.',
     'st.msg.pickResult':'Selecione um Resultado.',
     'st.msg.dateOppBack':'Data e Adversário são obrigatórios. Volte aos Dados do Jogo.',
