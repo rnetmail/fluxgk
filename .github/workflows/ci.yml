@@ -118,4 +118,11 @@ jobs:
               || { echo "::error::HML instável depois do deploy"; exit 1; }
           done
           echo "### HML: ${GITHUB_SHA::7} no ar (build $B)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tempo real atravessa os proxies (PB_CONNECT pelo domínio em até 5 s)
+        run: |
+          # o nginx do Hestia guardava o SSE em buffer: 0 bytes pelo domínio, ~15 s de espera por página
+          timeout 5 curl -s -N https://hml.fluxgk.rstecbr.com.br/api/realtime -o /tmp/sse || true
+          grep -q 'PB_CONNECT' /tmp/sse || { echo "::error::o PB_CONNECT não chegou pelo domínio em 5 s (buffer no proxy?)"; exit 1; }
+          echo "tempo real ok: $(head -c 80 /tmp/sse | tr '\n' ' ')"
           curl -fsS https://hml.fluxgk.rstecbr.com.br/api/health
