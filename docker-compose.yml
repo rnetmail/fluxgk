@@ -2,6 +2,8 @@
 #   fluxgk-hml  (branch develop) → PORTA_HTTP=3011 → hml.fluxgk.rstecbr.com.br
 #   fluxgk      (branch main)    → PORTA_HTTP=3010 → fluxgk.rstecbr.com.br
 # A diferença entre elas é SÓ a variável de ambiente da stack. Um compose, dois ambientes.
+# Cada stack tem o próprio volume (<stack>_pb_data): HML tem base de dados própria.
+# Deploy: CI do GitHub → webhook do Portainer (ver .github/workflows/ci.yml e promover.yml).
 #
 # DECISÕES, e o porquê de cada uma:
 #  · A porta do host vem de ${PORTA_HTTP} e é ligada em 127.0.0.1 — o Hestia é o
@@ -46,6 +48,10 @@ services:
       - "127.0.0.1:${PORTA_HTTP}:80"
     environment:
       TZ: ${TZ:-America/Bahia}
+      # Vão para /versao.json: o ambiente da stack (prd | hml) e o commit que o CI mandou subir
+      # (o webhook do Portainer recebe ?GIT_COMMIT=<sha>).
+      AMBIENTE: ${AMBIENTE:-prd}
+      GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       pocketbase:
         condition: service_healthy

@@ -1,0 +1,5 @@
+# Variáveis reais da stack (senhas): ficam no Portainer e em /root/.fluxgk, nunca no Git.
+.env
+*.env
+!.env.example
+node_modules/

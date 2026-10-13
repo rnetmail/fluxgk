@@ -37,7 +37,7 @@
     'hub.loginSub':'Goalkeeper Coach Platform',
     'hub.stayIn':'Stay signed in',
     'hub.phPassword':'password',
-    'hub.footer':'FluxGK · Data-Driven GK · v3.0',
+    'hub.footer':'FluxGK · Data-Driven GK',
 
     /* --- hub: home --- */
     'hub.switch':'SWITCH',
@@ -1105,7 +1105,7 @@
     'hub.loginSub':'Plataforma do Treinador de Goleiros',
     'hub.stayIn':'Manter conectado',
     'hub.phPassword':'senha',
-    'hub.footer':'FluxGK · Data-Driven GK · v3.0',
+    'hub.footer':'FluxGK · Data-Driven GK',
 
     /* --- hub: home --- */
     'hub.switch':'TROCAR',

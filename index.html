@@ -200,7 +200,8 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
       <div class="lerr" id="lerr" role="alert" aria-live="assertive"></div>
       <button class="lbtn" id="lbtn" onclick="doLogin()" data-i18n="common.signIn">Sign in</button>
     </div>
-    <div class="lfooter" data-i18n="hub.footer">FluxGK · Data-Driven GK · v3.0</div>
+    <div class="lfooter" data-i18n="hub.footer">FluxGK · Data-Driven GK</div>
+    <div class="lfooter" id="app-versao" style="margin-top:6px"></div>
   </div>
 </div>
 
@@ -987,6 +988,26 @@ async function boot(){
   }
 }
 boot();
+</script>
+<script>
+/* Versão no ar (1.<ano>.<seq>) e o ambiente, lidos de /versao.json, que o nginx escreve na partida.
+   Fora de produção, uma faixa fixa avisa que é HML — base de dados própria, não a do cliente. */
+(function(){
+  fetch('/versao.json',{cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(v){
+    if(!v || !v.versao) return;
+    var amb = String(v.ambiente || 'prd').toLowerCase();
+    var el = document.getElementById('app-versao');
+    if(el) el.textContent = 'v' + v.versao + (amb !== 'prd' ? ' · ' + amb.toUpperCase() : '') + (v.commit ? ' · ' + String(v.commit).slice(0,7) : '');
+    if(amb === 'prd') return;
+    document.title = '[' + amb.toUpperCase() + '] ' + document.title;
+    var f = document.createElement('div');
+    f.textContent = amb.toUpperCase();
+    f.title = 'Ambiente de homologação: dados separados da produção';
+    f.setAttribute('style','position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;background:#d97706;color:#fff;' +
+      'font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:4px 10px;border-radius:0 0 6px 6px;pointer-events:none');
+    document.body.appendChild(f);
+  }).catch(function(){});
+})();
 </script>
 </body>
 </html>

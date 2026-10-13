@@ -16,6 +16,12 @@ COPY icons/  /usr/share/nginx/html/icons/
 COPY static/ /usr/share/nginx/html/static/
 COPY assets/ /usr/share/nginx/html/assets/
 
+# Versão (1.<ano>.<seq>, gravada pelo workflow `promover`) e o script que, na partida, escreve
+# /versao.json com a versão, o ambiente da stack (AMBIENTE) e o commit do deploy (GIT_COMMIT).
+COPY VERSION /etc/fluxgk/VERSION
+COPY docker/nginx-versao.sh /docker-entrypoint.d/40-fluxgk-versao.sh
+RUN chmod +x /docker-entrypoint.d/40-fluxgk-versao.sh
+
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -q --spider http://127.0.0.1/health || exit 1
