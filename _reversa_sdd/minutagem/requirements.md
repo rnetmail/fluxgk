@@ -22,7 +22,7 @@ filtros e gráficos, relatório e PDF. Fonte do contador "Jogos" do painel do hu
 - RN-07 Indicadores: minutos totais por goleiro; % do total do clube = tempo do goleiro / Σ duração dos jogos; % quando relacionado = tempo do goleiro / Σ duração dos jogos em que foi relacionado. 🟢
 - 🟢 RN-08 Os percentuais usam só `totalMin` como denominador; com prorrogação, o tempo do goleiro inclui `e1/e2`, e o percentual pode passar de 100 %.
 - RN-09 O goleiro é identificado pelo **nome** (chave de `gkData`); a lista de goleiros é própria da Minutagem (D-04: manter assim). 🟢
-- 🔴 RN-10 A lista de adversários é gravada **sem escudo** no caminho compartilhado com `estatistica` e `xg`, apagando os escudos gravados por eles.
+- 🟢 RN-10 Os adversários são compartilhados com `estatistica` e `xg`; a Minutagem grava só os que mudaram, preservando o escudo gravado pelos outros (D-17, corrigido em 13/10; antes apagava os escudos).
 - 🟡 RN-11 Não há validação de intervalos sobrepostos, fora do período ou de dois goleiros em quadra ao mesmo tempo.
 - 🟢 RN-12 O jogo em preenchimento fica só no formulário até salvar.
 

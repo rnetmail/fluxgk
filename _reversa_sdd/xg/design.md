@@ -88,9 +88,9 @@ As abas diferentes de `match` abrem como camada sobre o app, abaixo do cabeçalh
 - `setGames`/`setOpponents` devolvem `false` em erro **sem avisar** o usuário. 🟢
 
 ## Riscos e Lacunas
-- 🔴 `fxg_games`/`fxg_clubs` sem escopo: troca de temporada ou de conta mistura e envia jogos alheios.
+- 🔴 `fxg_games`/`fxg_clubs` são apagados a cada contexto: um jogo salvo sem conexão e ainda não enviado se perde. [Reviewer, 13/10: corrigido; a versão anterior dizia que misturava contas]
 - 🔴 Lista vazia nunca é enviada: excluir o último jogo ou o último adversário não chega à nuvem.
-- 🔴 Adversários em formato diferente do da `estatistica` no mesmo caminho; sobrescrita mútua.
+- 🟢 ~~Adversários em formato diferente, sobrescrita mútua~~ — corrigido em 13/10 (D-17, mescla item a item).
 - 🔴 `FB.set` inexistente: configurações só no navegador; e `loadXGSettings` não lê o local, então elas se perdem ao recarregar.
 - 🟢 `season` nunca gravado; filtro por temporada inútil.
 - 🟢 Sem tempo real: outro aparelho só vê mudanças ao reabrir; e, ao reabrir, a nuvem sobrescreve o local (alteração local não enviada se perde).

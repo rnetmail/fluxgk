@@ -24,9 +24,9 @@ estatísticas por jogo, histórico, relatório por temporada e PDFs. As duas equ
 - RN-09 Relatório da temporada: totais de jogos, chutes, gols e xG; chutes por tipo de jogada; por adversário, chutes, gols e xG **da nossa equipe** (`alfa`). 🟢
 - RN-10 Partidas e adversários ficam primeiro no navegador (`fxg_games`, `fxg_clubs`) e sobem à nuvem 0,5 s depois de cada alteração, **lista inteira** de uma vez. 🟢
 - RN-11 Ao abrir, a nuvem é lida **uma vez** (sem tempo real) e, se tiver dados, substitui a cópia do navegador. 🟢
-- 🔴 RN-12 A cópia do navegador **não é separada por usuário, clube nem temporada** (`fxg_games`, `fxg_clubs`). Trocar de temporada, ou outro técnico no mesmo navegador, faz os jogos anteriores aparecerem e serem enviados para a nova temporada ou conta.
+- 🟢 RN-12 A cópia do navegador (`fxg_games`, `fxg_clubs`) **é apagada a cada contexto recebido** e preenchida de novo pela nuvem (`mod_xg.html:1369-1371`). Por isso não mistura contas nem temporadas, mas **um jogo salvo sem conexão, que ainda não subiu, se perde** quando o contexto chega. [Reviewer, 13/10: a versão anterior desta regra estava errada]
 - 🔴 RN-13 Excluir o **último** jogo nunca chega à nuvem (`syncToCloud` não envia lista vazia); na próxima abertura ele volta.
-- 🔴 RN-14 Os adversários do xG (`{id, name, gk, img}`) vão para o mesmo caminho que `estatistica` e `minutagem` usam com outro formato (`{id, name, badge}`): cada módulo apaga o que o outro gravou.
+- 🟢 RN-14 Os adversários do clube são compartilhados com `estatistica` e `minutagem` no formato `{id, name, badge, gk?}`; cada módulo grava só o que mudou, item a item, mesclando com a nuvem (`fluxgkMesclarAdversarios`, D-17). Na tela do xG, `badge` aparece como `img`. **Corrigido em 13/10** — antes, cada módulo regravava a lista inteira e apagava o que os outros gravaram.
 - 🔴 RN-15 As configurações do módulo nunca chegam à nuvem (`FB.set` não existe).
 - 🟢 RN-16 A partida salva não registra a temporada; o filtro por temporada do histórico nunca encontra nada.
 

@@ -72,7 +72,7 @@
   - Critério de pronto: Critério de Aceitação 4; outro técnico no mesmo navegador não vê jogos alheios
   - Confiança: 🟢
 
-- [ ] T-13, Enviar lista vazia: excluir o último jogo ou adversário apaga na nuvem
+- [x] T-13, Enviar lista vazia: excluir o último jogo ou adversário apaga na nuvem — **adversários: feito em 13/10** (exclusão registrada e enviada; mesmo com a lista vazia). Jogos: continua pendente
   - Origem no legado: `syncToCloud` (`:1475-1481`)
   - Critério de pronto: Critério de Aceitação 5
   - Confiança: 🟢
@@ -82,7 +82,7 @@
   - Critério de pronto: salvar uma partida grava só ela
   - Confiança: 🟡 (muda a forma do dado; ver TM-01)
 
-- [ ] T-15, Adversários: formato único compartilhado (proposta: `{id: slug(nome), name, badge, gk?}`) e gravação item a item com `update`, nunca a lista inteira — feito junto com `estatistica` e `minutagem`
+- [x] T-15, Adversários: formato único compartilhado (proposta: `{id: slug(nome), name, badge, gk?}`) e gravação item a item com `update`, nunca a lista inteira — feito junto com `estatistica` e `minutagem` — **feito em 13/10** (`fluxgkMesclarAdversarios`, igual nos três módulos; teste `tools/test-adversarios.mjs` no CI). O cadastro pelo hub (dono, D-17) fica para depois
   - Origem no legado: `FB.setOpponents` (`:1450-1453`); `mod_stats.html:864-870`; `mod_minutes.html:504-509`
   - Critério de pronto: Critério de Aceitação 6
   - Confiança: 🟢 (defeito) / 🟢 (D-17: formato único `{id, name, badge}`; o dono do cadastro é o hub)

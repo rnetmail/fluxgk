@@ -136,6 +136,7 @@
     });
     db.ref(_SPATH.opponents).on('value',function(snap){
       var v=snap.val();
+      window._oppNuvem=v||{};   /* o que está na nuvem: base da mescla (D-17) */
       if(v){ST.clubs=Object.values(v).map(function(c){return c.name||c;});
             ST.clubBadges={};Object.values(v).forEach(function(c){if(c.name&&c.badge)ST.clubBadges[c.name]=c.badge;});}
       try{populateAllSelects();}catch(e){}
@@ -861,14 +862,48 @@ function persist(){
   if(_SPATH.results) window.fbSet(_SPATH.results,
       (ST.results||[]).map(function(v){return {v:v,k:(ST.resultKinds&&ST.resultKinds[v])||''};})
     ).catch(e=>console.error('FB results:',e));
-  /* adversarios: por clube (compartilhado com o xG) */
-  var opp={};
-  (ST.clubs||[]).forEach(function(name){
-    var id=(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-');
-    opp[id]={id:id,name:name,badge:(ST.clubBadges&&ST.clubBadges[name])||''};
-  });
-  window.fbSet(_SPATH.opponents, opp).catch(e=>console.error('FB opponents:',e));
+  /* adversarios: por clube, compartilhados com Minutagem e xG — so o que mudou, item a item (D-17).
+     Antes da primeira leitura da nuvem nao grava: a lista local pode ser so o padrao. */
+  if(window._oppNuvem){
+    var nomes=(ST.clubs||[]), naLista={};
+    nomes.forEach(function(n){naLista[String(n).trim().toLowerCase()]=1;});
+    var apagados=Object.keys(_oppNuvem).map(function(id){return _oppNuvem[id]&&_oppNuvem[id].name;})
+      .filter(function(n){return n&&!naLista[String(n).trim().toLowerCase()];});
+    var upd=fluxgkMesclarAdversarios(_oppNuvem,
+      nomes.map(function(n){return {name:n,badge:(ST.clubBadges&&ST.clubBadges[n])||''};}),apagados);
+    Object.keys(upd).forEach(function(id){
+      window.fbSet(_SPATH.opponents+'/'+id, upd[id]).catch(e=>console.error('FB opponents:',e));
+    });
+  }
 }
+/* D-17 · adversários do clube, compartilhados por Estatística, Minutagem e xG, no formato {id, name, badge}.
+   Antes, cada módulo regravava a lista inteira com o seu formato e apagava escudos e adversários dos outros.
+   Devolve só o que precisa ir para a nuvem: {id: registro} para criar ou alterar, {id: null} para apagar.
+   Casa pelo nome (sem diferença de maiúsculas) para não duplicar; campo que este módulo não tem fica como
+   está na nuvem; só apaga o que este módulo apagou (`apagados`, por nome). Mesma função nos três módulos. */
+function fluxgkMesclarAdversarios(nuvem, itens, apagados){
+  nuvem = nuvem || {};
+  var chave = function(n){ return String(n == null ? '' : n).trim().toLowerCase(); };
+  var porNome = {}, upd = {};
+  Object.keys(nuvem).forEach(function(id){ var c = nuvem[id]; if(c && c.name) porNome[chave(c.name)] = id; });
+  (itens || []).forEach(function(it){
+    var nome = String((it && it.name) || '').trim(); if(!nome) return;
+    var id = porNome[chave(nome)] || (it && it.id) || nome.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var atual = nuvem[id] || {};
+    var novo = Object.assign({}, atual, { id: id, name: nome });
+    novo.badge = (it && (it.badge || it.img)) || atual.badge || atual.img || '';
+    delete novo.img;
+    if(it && it.gk != null && it.gk !== '') novo.gk = it.gk;
+    if(JSON.stringify(novo) !== JSON.stringify(atual)) upd[id] = novo;
+    porNome[chave(nome)] = id;
+  });
+  (apagados || []).forEach(function(nome){
+    var id = porNome[chave(nome)];
+    if(id && nuvem[id] && !(id in upd)) upd[id] = null;
+  });
+  return upd;
+}
+
 function persistGame(game){
   // Write single game (used after save/update)
   const g = {...game, shots: game.shots||[]};

@@ -23,7 +23,7 @@ painel com gráficos e filtros cruzados, relatórios em PDF. As listas de classi
 - RN-08 Renomear ação, momento, distância ou resultado **reescreve** as finalizações já gravadas com o nome novo; nome repetido é recusado. 🟢 (tipos e desfechos ofensivos não têm renomear)
 - RN-09 Zona do gol: 6 zonas (superior/meio/inferior × esquerda/direita); zona da quadra: área numerada. 🟢
 - RN-10 Listas são da temporada (`<dataPath>/stats/…`); adversários são do clube (`users/<uid>/clubs/<clubId>/opponents`), compartilhados com `minutagem` e `xg`. 🟢
-- 🔴 RN-11 Qualquer alteração de lista regrava **as nove listas e os adversários inteiros**; os adversários sobrescrevem o que `minutagem` e `xg` gravaram (ver `../xg/requirements.md`, RN-14).
+- 🔴 RN-11 Qualquer alteração de lista regrava **as nove listas**. Os adversários, desde 13/10, vão só no que mudou, item a item, sem apagar o que `minutagem` e `xg` gravaram (D-17) (ver `../xg/requirements.md`, RN-14).
 - 🟢 RN-12 O jogo em andamento fica **só na memória** até "Salvar": fechar ou recarregar a página durante um jogo perde todas as finalizações registradas.
 
 ## Requisitos Funcionais

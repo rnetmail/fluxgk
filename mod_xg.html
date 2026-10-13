@@ -836,7 +836,12 @@ const DB={
   delGame(id){this._s('fxg_games',this.games().filter(g=>g.id!==id));},
   clubs(){return this._g('fxg_clubs')||[];},
   saveClub(cl){const a=this.clubs(),i=a.findIndex(x=>x.id===cl.id);i>=0?a[i]=cl:a.push(cl);this._s('fxg_clubs',a);},
-  delClub(id){this._s('fxg_clubs',this.clubs().filter(c=>c.id!==id));},
+  delClub(id){
+    /* lembra o nome apagado: a nuvem e compartilhada, entao so se apaga la o que foi apagado aqui (D-17) */
+    const c=this.clubs().find(x=>x.id===id);
+    if(c&&c.name){const ap=this._g('fxg_clubs_apagados')||[];ap.push(c.name);this._s('fxg_clubs_apagados',ap);}
+    this._s('fxg_clubs',this.clubs().filter(c=>c.id!==id));
+  },
 };
 const _origSaveGame=DB.saveGame.bind(DB);
 DB.saveGame=function(g){_origSaveGame(g);setTimeout(syncToCloud,500);};
@@ -1368,7 +1373,7 @@ window.addEventListener('message', function(e){
   _XPATH.opponents = 'users/'+d.uid+'/clubs/'+(d.club&&d.club.id)+'/opponents';
   /* LIMPA cache local: pode conter dados de outra conta (localStorage e do navegador, nao da conta).
      O PocketBase, isolado por uid, vai preencher em seguida. */
-  try{ localStorage.removeItem('fxg_games'); localStorage.removeItem('fxg_clubs'); }catch(e){}
+  try{ localStorage.removeItem('fxg_games'); localStorage.removeItem('fxg_clubs'); localStorage.removeItem('fxg_clubs_apagados'); }catch(e){}
   console.log('[FluxGK] xG: jogos em', _XPATH.games);
   console.log('[FluxGK] xG: adversarios em', _XPATH.opponents);
 
@@ -1427,11 +1432,40 @@ function _initFBXG(cfg){
           var g=snap.val(); if(g){ localStorage.setItem('fxg_games',JSON.stringify(Object.values(g))); try{renderHist();}catch(e){} }
         }).catch(function(e){console.warn('xG games pull:',e);});
         _fbXGDb.ref(_XPATH.opponents).get().then(function(snap){
-          var c=snap.val(); if(c){ localStorage.setItem('fxg_clubs',JSON.stringify(Object.values(c))); try{renderClubs();}catch(e){} }
+          /* formato comum {id, name, badge} (D-17); a tela do xG usa `img` */
+          var c=snap.val(); if(c){ localStorage.setItem('fxg_clubs',JSON.stringify(Object.values(c).map(function(x){return Object.assign({},x,{img:x.img||x.badge||null});}))); try{renderClubs();}catch(e){} }
         }).catch(function(e){console.warn('xG opponents pull:',e);});
         updateFBStatus();
       });
     }).catch(function(e){console.error("[FluxGK] falha ao carregar PocketBase",e);});
+}
+
+/* D-17 · adversários do clube, compartilhados por Estatística, Minutagem e xG, no formato {id, name, badge}.
+   Antes, cada módulo regravava a lista inteira com o seu formato e apagava escudos e adversários dos outros.
+   Devolve só o que precisa ir para a nuvem: {id: registro} para criar ou alterar, {id: null} para apagar.
+   Casa pelo nome (sem diferença de maiúsculas) para não duplicar; campo que este módulo não tem fica como
+   está na nuvem; só apaga o que este módulo apagou (`apagados`, por nome). Mesma função nos três módulos. */
+function fluxgkMesclarAdversarios(nuvem, itens, apagados){
+  nuvem = nuvem || {};
+  var chave = function(n){ return String(n == null ? '' : n).trim().toLowerCase(); };
+  var porNome = {}, upd = {};
+  Object.keys(nuvem).forEach(function(id){ var c = nuvem[id]; if(c && c.name) porNome[chave(c.name)] = id; });
+  (itens || []).forEach(function(it){
+    var nome = String((it && it.name) || '').trim(); if(!nome) return;
+    var id = porNome[chave(nome)] || (it && it.id) || nome.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var atual = nuvem[id] || {};
+    var novo = Object.assign({}, atual, { id: id, name: nome });
+    novo.badge = (it && (it.badge || it.img)) || atual.badge || atual.img || '';
+    delete novo.img;
+    if(it && it.gk != null && it.gk !== '') novo.gk = it.gk;
+    if(JSON.stringify(novo) !== JSON.stringify(atual)) upd[id] = novo;
+    porNome[chave(nome)] = id;
+  });
+  (apagados || []).forEach(function(nome){
+    var id = porNome[chave(nome)];
+    if(id && nuvem[id] && !(id in upd)) upd[id] = null;
+  });
+  return upd;
 }
 
 const FB={
@@ -1447,10 +1481,17 @@ const FB={
     try{var o={};arr.forEach(function(g){o[g.id]=g;});await _fbXGDb.ref(_XPATH.games).set(o);return true;}
     catch(e){return false;}
   },
+  /* so o que mudou, item a item, mesclado com a nuvem (Estatistica e Minutagem gravam no mesmo lugar) */
   async setOpponents(arr){
     if(!_fbXGDb||!_XPATH.opponents)return false;
-    try{var o={};arr.forEach(function(c){o[c.id]=c;});await _fbXGDb.ref(_XPATH.opponents).set(o);return true;}
-    catch(e){return false;}
+    try{
+      var nuvem=(await _fbXGDb.ref(_XPATH.opponents).get()).val()||{};
+      var apagados=DB._g('fxg_clubs_apagados')||[];
+      var upd=fluxgkMesclarAdversarios(nuvem,arr,apagados);
+      await Promise.all(Object.keys(upd).map(function(id){return _fbXGDb.ref(_XPATH.opponents+'/'+id).set(upd[id]);}));
+      DB._s('fxg_clubs_apagados',[]);
+      return true;
+    }catch(e){return false;}
   },
   async test(){return _fbXGReady;},
   _cfg(){return _fbXGReady?{pid:(_HUB&&_HUB.cloudConfig&&_HUB.cloudConfig.projectId)||'—'}:null;}
@@ -1476,7 +1517,7 @@ async function syncToCloud(){
   if(!FB.ready())return;
   const games=DB.games(),clubs=DB.clubs();
   if(games.length)   await FB.setGames(games);
-  if(clubs.length)   await FB.setOpponents(clubs);
+  if(clubs.length || (DB._g('fxg_clubs_apagados')||[]).length) await FB.setOpponents(clubs);
   updateFBStatus();
 }
 

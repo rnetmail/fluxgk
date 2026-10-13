@@ -39,6 +39,9 @@ jobs:
       - name: Sintaxe de todo JavaScript (páginas e scripts soltos)
         run: node tools/checa-paginas.mjs
 
+      - name: Testes de unidade das regras compartilhadas
+        run: node tools/test-adversarios.mjs
+
       - name: Compose válido
         run: PORTA_HTTP=3999 docker compose config -q
 

@@ -89,7 +89,7 @@ Os rótulos são guardados como texto; o vínculo entre finalização e lista é
 
 ## Riscos e Lacunas
 - 🔴 Jogo em andamento só em `CUR` (memória): recarregar perde tudo; crítico para uso ao vivo.
-- 🔴 `persist()` regrava adversários a partir da lista local de nomes: apaga escudos e adversários gravados por `minutagem` e `xg`; lê `c.name||c` e só `badge` (o xG grava `img`).
+- 🟢 ~~`persist()` regrava adversários e apaga escudos dos outros módulos~~ — corrigido em 13/10: mescla item a item com a nuvem, e só depois da primeira leitura (D-17).
 - 🟡 Alterar uma lista antes de os listeners responderem grava os padrões locais por cima das listas da nuvem (mesmo padrão da `periodizacao`).
 - 🟢 Uma lista esvaziada em outro aparelho não esvazia aqui (lista remota vazia é ignorada).
 - 🟢 Cada alteração de lista = 10 gravações; renomear = 1 gravação por jogo afetado. Com a fluxdb 1.1, 1 requisição por nó gravado (eram ~4 na 1.0).

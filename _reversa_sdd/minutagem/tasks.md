@@ -68,7 +68,7 @@
   - Critério de pronto: Critério de Aceitação 5
   - Confiança: 🟢
 
-- [ ] T-12, Adversários no formato único, item a item (junto com `estatistica` e `xg`)
+- [x] T-12, Adversários no formato único, item a item (junto com `estatistica` e `xg`) — **feito em 13/10** (`fluxgkMesclarAdversarios`, igual nos três módulos; teste `tools/test-adversarios.mjs` no CI). O cadastro pelo hub (dono, D-17) fica para depois
   - Origem no legado: `persist` (`:500-510`), listener de adversários
   - Critério de pronto: Critério de Aceitação 6
   - Confiança: 🟢

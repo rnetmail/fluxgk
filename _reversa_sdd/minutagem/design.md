@@ -85,7 +85,7 @@
 ## Riscos e Lacunas
 - 🟢 **Relacionados desmarcados no meio do preenchimento:** qualquer resposta de listener chama `refreshAll()` → `buildCollectForm()` → `buildSquadList()`, que recria as caixas de "relacionado" desmarcadas (`:1304-1312`, `:611-636`). Os intervalos são preservados, as marcações não. Como o adaptador avisa duas vezes por gravação e qualquer outro aparelho dispara o listener, isso acontece durante o jogo.
 - 🟢 **Editar jogo antigo perde goleiros que saíram da lista:** `editGame` e `collectGameData` só percorrem `ST.gks`; regravar o jogo apaga os minutos de quem não está mais na lista.
-- 🔴 Adversários gravados sem escudo no caminho compartilhado.
+- 🟢 ~~Adversários gravados sem escudo no caminho compartilhado~~ — corrigido em 13/10 (D-17).
 - 🟢 Percentual sobre `totalMin` ignora a prorrogação (pode passar de 100 %).
 - 🟢 Jogo em preenchimento só no DOM: recarregar perde tudo.
 - 🟢 `gkId` só troca espaços (`gk.replace(/\s/g,'_')`, `:653`, `:699`, `:728`, `:771`, `:926`): nomes com aspas ou outros símbolos quebram `onclick` e ids; "João Silva" e "João_Silva" colidem.

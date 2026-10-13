@@ -78,7 +78,7 @@
   - Critério de pronto: adicionar uma competição faz uma gravação
   - Confiança: 🟢
 
-- [ ] T-14, Adversários item a item no formato único, sem regravar a lista inteira
+- [x] T-14, Adversários item a item no formato único, sem regravar a lista inteira — **feito em 13/10** (`fluxgkMesclarAdversarios`, igual nos três módulos; teste `tools/test-adversarios.mjs` no CI). O cadastro pelo hub (dono, D-17) fica para depois
   - Origem no legado: `persist` (`:864-870`), listener (`:133-138`)
   - Critério de pronto: Critério de Aceitação 6
   - Confiança: 🟢 (defeito) / 🟢 (D-17: formato único `{id, name, badge}`; o dono do cadastro é o hub)
