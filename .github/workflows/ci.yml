@@ -40,7 +40,7 @@ jobs:
         run: node tools/checa-paginas.mjs
 
       - name: Testes de unidade das regras compartilhadas
-        run: node tools/test-adversarios.mjs
+        run: node tools/test-adversarios.mjs && node tools/test-carga.mjs
 
       - name: Compose válido
         run: PORTA_HTTP=3999 docker compose config -q

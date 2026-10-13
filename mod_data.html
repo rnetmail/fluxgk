@@ -1002,8 +1002,7 @@ function loadUserState(){
         save();
         // Apply branding immediately
         applyTheme();
-        // Push to PocketBase under user's path
-        setTimeout(()=>rtPushAll(),500);
+        // sobe na primeira leitura da nuvem: os registros migrados ainda nao tem _sync
         // Mark old key as migrated
         localStorage.setItem("glcv5_migrated","true");
         showToast(TX("data.msg.restored"));
@@ -1058,41 +1057,113 @@ function _set(path,data){if(!_db||!_rf||!_uid)return;dotY();_rf.set(_rf.ref(_db,
 function _upd(path,data){if(!_db||!_rf||!_uid)return;dotY();_rf.update(_rf.ref(_db,path),data).then(dotG).catch(e=>{console.warn("upd:",e);dotR();});}
 function _del(path){if(!_db||!_rf||!_uid)return;_rf.remove(_rf.ref(_db,path)).catch(()=>{});}
 
-function rtSaveSession(s){const d={...s};delete d._pk;_set(uPath("sessions/"+s._pk+"/"+s.id),d);}
-function rtDeleteSession(s){_del(uPath("sessions/"+s._pk+"/"+s.id));}
-function rtSavePlayer(p){_upd(uPath("players/"+p.id),{name:p.name,id:p.id});}
+/* Cada gravacao carimba `mt` (alteracao) e, confirmada na nuvem, marca `_sync`: e assim que a
+   reconciliacao distingue "criado aqui e ainda nao subiu" de "apagado em outro aparelho". */
+function _lapides(){ if(!ST._lapides) ST._lapides={sessions:{},players:{}}; return ST._lapides; }
+function _subirSessao(s){
+  if(!_db||!_rf||!_uid)return;
+  const d={...s};delete d._pk;delete d._sync;
+  dotY();
+  _rf.set(_rf.ref(_db,uPath("sessions/"+s._pk+"/"+s.id)),d)
+    .then(()=>{const x=ST.sessions.find(y=>y.id===s.id);if(x){x._sync=s.mt||s.ts||1;save();}dotG();})
+    .catch(e=>{console.warn("set:",e);dotR();});
+}
+function rtSaveSession(s){s.mt=Date.now();save();_subirSessao(s);}
+function rtDeleteSession(s){
+  _lapides().sessions[s.id]=Date.now();save();      /* sem conexao, a exclusao espera a proxima leitura */
+  if(!_db||!_rf||!_uid)return;
+  _rf.remove(_rf.ref(_db,uPath("sessions/"+s._pk+"/"+s.id))).then(()=>{delete _lapides().sessions[s.id];save();}).catch(()=>{});
+}
+function rtSavePlayer(p){
+  if(!_db||!_rf||!_uid)return;
+  dotY();
+  _rf.update(_rf.ref(_db,uPath("players/"+p.id)),{name:p.name,id:p.id})
+    .then(()=>{if(ST.players[p.id]){ST.players[p.id]._sync=1;save();}dotG();})
+    .catch(e=>{console.warn("upd:",e);dotR();});
+}
 /* status vazio vira null para o PocketBase APAGAR o campo na reativacao */
 function rtSaveStatus(p){_upd(uPath("players/"+p.id),{
   status:p.status||null, statusDesde:p.statusDesde||null, statusNota:p.statusNota||null});}
 function rtSavePhoto(id,ph){setTimeout(()=>_upd(uPath("players/"+id),{photo:ph}),1000);}
-function rtDeletePlayer(id){_del(uPath("players/"+id));_del(uPath("sessions/"+id));}
+function rtDeletePlayer(id){
+  _lapides().players[id]=Date.now();save();
+  if(!_db||!_rf||!_uid)return;
+  Promise.all([_rf.remove(_rf.ref(_db,uPath("players/"+id))),_rf.remove(_rf.ref(_db,uPath("sessions/"+id)))])
+    .then(()=>{delete _lapides().players[id];save();}).catch(()=>{});
+}
 function rtSaveBrand(b){_set(uPath("config/branding"),b);}
 
-// ── PUSH ALL LOCAL → RTDB ─────────────────────────────────
-async function rtPushAll(){
-  if(!_db||!_rf||!_uid)return;
-  const upd={};
-  Object.values(ST.players).forEach(p=>{
-    upd[uPath("players/"+p.id)]={name:p.name,id:p.id};
-    if(p.photo)upd[uPath("players/"+p.id+"/photo")]=p.photo;
-    if(p.status){
-      upd[uPath("players/"+p.id+"/status")]=p.status;
-      upd[uPath("players/"+p.id+"/statusDesde")]=p.statusDesde||"";
-      upd[uPath("players/"+p.id+"/statusNota")]=p.statusNota||"";
-    }
+/* ── RECONCILIACAO COM A NUVEM ─────────────────────────────
+   Substitui o rtPushAll, que ao abrir ENVIAVA a copia do navegador inteira antes de ler a nuvem:
+   desfazia o que outro aparelho mudou e, regravando players/<id> = {name,id}, apagava foto e status.
+   Agora cada leitura da nuvem e conciliada registro a registro (D-11: vence o mais recente):
+   - nos dois lados: o de carimbo maior (mt = alteracao, ts = criacao) fica; o outro lado e atualizado;
+   - so aqui: sem `_sync` (nunca confirmado na nuvem) sobe; com `_sync`, foi apagado em outro aparelho e sai daqui;
+   - so na nuvem: apagado aqui sem conexao (lapide) e apagado la; senao entra aqui.
+   `confirmado`: a leitura veio sem gravacao em voo (o adaptador le da copia local, que ja inclui gravacoes
+   ainda nao aceitas pelo servidor). So entao "igual nos dois lados" vira `_sync`: senao, uma gravacao
+   recusada pareceria "apagado em outro aparelho" e o registro sumiria.
+   Funcao pura: devolve o novo estado e o que gravar/apagar; o teste esta em tools/test-carga.mjs. */
+function fluxgkReconciliarCarga(local, remoto, lapides, confirmado){
+  local = local || {}; remoto = remoto || {}; lapides = lapides || {};
+  var carimbo = function(s){ return Number((s && (s.mt || s.ts)) || 0); };
+  var out = { players: {}, sessions: [], gravarSessoes: [], apagarSessoes: [], gravarPlayers: [], apagarPlayers: [],
+              lapidesSessoes: {}, lapidesPlayers: {} };
+  var lapS = lapides.sessions || {}, lapP = lapides.players || {};
+  /* goleiros */
+  var lp = local.players || {}, rp = remoto.players || {};
+  Object.keys(lp).forEach(function(id){
+    var l = lp[id], r = rp[id];
+    if(!l) return;
+    if(r && r.id){
+      var m = { name: r.name || l.name, id: id, photo: r.photo || l.photo || null };
+      if(confirmado || l._sync) m._sync = 1;
+      if(r.status){ m.status = r.status; m.statusDesde = r.statusDesde || ''; m.statusNota = r.statusNota || ''; }
+      out.players[id] = m;
+      if(!r.photo && l.photo) out.gravarPlayers.push({ id: id, campos: { photo: l.photo } });
+    } else if(!l._sync){
+      out.players[id] = Object.assign({}, l);
+      var c = { name: l.name, id: id };
+      if(l.photo) c.photo = l.photo;
+      if(l.status){ c.status = l.status; c.statusDesde = l.statusDesde || ''; c.statusNota = l.statusNota || ''; }
+      out.gravarPlayers.push({ id: id, campos: c });
+    } /* com _sync e fora da nuvem: apagado em outro aparelho */
   });
-  ST.sessions.forEach(s=>{
-    const d={...s};delete d._pk;
-    upd[uPath("sessions/"+s._pk+"/"+s.id)]=d;
+  Object.keys(rp).forEach(function(id){
+    var r = rp[id];
+    if(!r || !r.id || lp[id]) return;
+    if(lapP[id]){ out.apagarPlayers.push(id); out.lapidesPlayers[id] = lapP[id]; return; }
+    var m = { name: r.name, id: id, photo: r.photo || null, _sync: 1 };
+    if(r.status){ m.status = r.status; m.statusDesde = r.statusDesde || ''; m.statusNota = r.statusNota || ''; }
+    out.players[id] = m;
   });
-  if(ST.brand&&(ST.brand.name||ST.brand.color||ST.brand.logo))upd[uPath("config/branding")]=ST.brand;
-  upd[uPath("config/wbFields")]=wbFields();
-  upd[uPath("config/postFields")]=postFields();
-  if(Array.isArray(ST.trainingTypes)&&ST.trainingTypes.length) upd[uPath("trainingTypes")]=ST.trainingTypes;
-  if(!Object.keys(upd).length){dotG();return;}
-  dotY();
-  try{await _rf.update(_rf.ref(_db,"/"),upd);dotG();}
-  catch(e){console.warn("pushAll:",e);dotR();}
+  /* registros (pre, pos, falta, descanso) */
+  var rs = {};
+  Object.keys(remoto.sessions || {}).forEach(function(pk){
+    var ps = remoto.sessions[pk] || {};
+    Object.keys(ps).forEach(function(sid){ var s = ps[sid]; if(s && s.id) rs[sid] = Object.assign({}, s, { _pk: pk }); });
+  });
+  var vistos = {};
+  (local.sessions || []).forEach(function(l){
+    if(!l || !l.id) return;
+    var r = rs[l.id]; vistos[l.id] = 1;
+    if(r){
+      if(carimbo(l) > carimbo(r)){ var g = Object.assign({}, l); out.sessions.push(g); out.gravarSessoes.push(g); }
+      else if(carimbo(r) > carimbo(l) || confirmado || l._sync) out.sessions.push(Object.assign({}, r, { _sync: carimbo(r) || 1 }));
+      else { var e = Object.assign({}, r); delete e._sync; out.sessions.push(e); }
+    } else if(!l._sync){
+      if(!out.players[l._pk]) return;                       /* goleiro apagado: o registro vai junto */
+      var n = Object.assign({}, l); out.sessions.push(n); out.gravarSessoes.push(n);
+    } /* com _sync e fora da nuvem: apagado em outro aparelho */
+  });
+  Object.keys(rs).forEach(function(sid){
+    if(vistos[sid]) return;
+    var r = rs[sid];
+    if(lapS[sid] || lapP[r._pk]){ out.apagarSessoes.push(r); if(lapS[sid]) out.lapidesSessoes[sid] = lapS[sid]; return; }
+    out.sessions.push(Object.assign({}, r, { _sync: carimbo(r) || 1 }));
+  });
+  /* lapide de algo que ja nao esta na nuvem: cumprida */
+  return out;
 }
 
 // ── REAL-TIME LISTENER (user-scoped) ─────────────────────
@@ -1100,8 +1171,14 @@ function rtListen(){
   if(!_db||!_rf||!_uid||_listening)return;
   _listening=true;
   _rf.onValue(_rf.ref(_db,uPath("").replace(/\/$/,"")),snap=>{
-    const rem=snap.val();if(!rem)return;
+    const rem=snap.val()||{};
     let changed=false;
+    /* configuracoes que ainda nao existem na nuvem sobem uma vez (antes, o rtPushAll as regravava sempre) */
+    const cfgUp={};
+    if(!(rem.config&&Array.isArray(rem.config.wbFields)&&rem.config.wbFields.length)) cfgUp["config/wbFields"]=wbFields();
+    if(!(rem.config&&Array.isArray(rem.config.postFields))) cfgUp["config/postFields"]=postFields();
+    if(!(rem.config&&rem.config.branding)&&ST.brand&&(ST.brand.name||ST.brand.color||ST.brand.logo)) cfgUp["config/branding"]=ST.brand;
+    Object.keys(cfgUp).forEach(k=>_set(uPath(k),cfgUp[k]));
     if(rem.config&&Array.isArray(rem.config.wbFields)&&rem.config.wbFields.length){
       if(JSON.stringify(rem.config.wbFields)!==JSON.stringify(ST.wbFields)){ST.wbFields=rem.config.wbFields;changed=true;try{buildPreFields();renderFieldEditor();}catch(e){}}
     }
@@ -1127,35 +1204,27 @@ function rtListen(){
         ST.trainingTypes = juntos; changed = true;
         try{ renderTypeSelects(); }catch(e){}
       }
+      if(juntos.length > rem.trainingTypes.length) _set(uPath("trainingTypes"), juntos);
+    } else if(Array.isArray(ST.trainingTypes) && ST.trainingTypes.length){
+      _set(uPath("trainingTypes"), ST.trainingTypes);
     }
-    if(rem.players){
-      Object.entries(rem.players).forEach(([id,p])=>{
-        if(!p||!p.id)return;
-        if(!ST.players[id]){
-          ST.players[id]={name:p.name,id:p.id,photo:p.photo||null};
-          if(p.status){ST.players[id].status=p.status;ST.players[id].statusDesde=p.statusDesde||"";ST.players[id].statusNota=p.statusNota||"";}
-          changed=true;
-        } else {
-          const lc=ST.players[id];
-          if(p.photo&&!lc.photo){lc.photo=p.photo;changed=true;}
-          /* a situacao vem do servidor: quem afastou num aparelho afasta em todos */
-          if((p.status||"ativo")!==plSt(lc)){
-            if(p.status){lc.status=p.status;lc.statusDesde=p.statusDesde||"";lc.statusNota=p.statusNota||"";}
-            else {delete lc.status;delete lc.statusDesde;delete lc.statusNota;}
-            changed=true;
-          }
-        }
-      });
-    }
-    if(rem.sessions){
-      Object.entries(rem.sessions).forEach(([pk,ps])=>{
-        if(!ps)return;
-        Object.entries(ps).forEach(([sid,s])=>{
-          if(!s||!s.id)return;
-          if(!ST.sessions.find(x=>x.id===sid)){ST.sessions.push({...s,_pk:pk});changed=true;}
-        });
-      });
-    }
+    const antes=JSON.stringify([ST.players,ST.sessions]);
+    let semVoo=false;
+    try{ semVoo = !!(window.fluxdb && fluxdb._internal && fluxdb._internal.pending() === 0); }catch(e){}
+    const rc=fluxgkReconciliarCarga({players:ST.players,sessions:ST.sessions},
+                                    {players:rem.players,sessions:rem.sessions},_lapides(),semVoo);
+    ST.players=rc.players; ST.sessions=rc.sessions;
+    ST._lapides={sessions:rc.lapidesSessoes,players:rc.lapidesPlayers};
+    if(ST.currentPlayer&&!ST.players[ST.currentPlayer])ST.currentPlayer="";
+    rc.gravarSessoes.forEach(_subirSessao);
+    rc.gravarPlayers.forEach(g=>{
+      if(!_db||!_rf||!_uid)return;
+      _rf.update(_rf.ref(_db,uPath("players/"+g.id)),g.campos)
+        .then(()=>{if(ST.players[g.id]){ST.players[g.id]._sync=1;save();}}).catch(e=>console.warn("upd:",e));
+    });
+    rc.apagarSessoes.forEach(s=>_del(uPath("sessions/"+s._pk+"/"+s.id)));
+    rc.apagarPlayers.forEach(id=>{_del(uPath("players/"+id));_del(uPath("sessions/"+id));});
+    if(JSON.stringify([ST.players,ST.sessions])!==antes) changed=true;
     if(changed){ migrateWellbeingScale(); repairPrePostLinks(); save(); renderAll(); }
   },err=>console.warn("listener:",err));
 }
@@ -2625,7 +2694,7 @@ function today2(){return new Date().toISOString().split("T")[0];}
         console.log("[FluxGK] Load Control: autenticado como",u.uid);
         dbBadge(true);
         loadUserState();
-        rtPushAll().then(function(){rtListen();});
+        rtListen();   /* le a nuvem e concilia; nada sobe antes da primeira leitura */
         renderAll();
       });
     });
