@@ -18,7 +18,8 @@
 html{-webkit-text-size-adjust:100%}
 body{background:var(--paper);color:var(--ink);font:16px/1.5 'Space Grotesk',system-ui,sans-serif;min-height:100vh;
   padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom))}
-main{max-width:480px;margin:0 auto;padding-top:20px;display:flex;flex-direction:column;gap:14px}
+main,form{display:flex;flex-direction:column;gap:14px}
+main{max-width:480px;margin:0 auto;padding-top:20px}
 .marca{font:700 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
 h1{font-size:24px;line-height:1.2;text-wrap:balance}
 .sub{color:var(--mute);font-size:14px}
@@ -33,10 +34,11 @@ legend{font-weight:700;font-size:17px;margin-bottom:10px}
 .escala button:focus-visible,textarea:focus-visible,.enviar:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .extremos{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px}
 textarea{width:100%;min-height:84px;border:1px solid var(--faint);border-radius:10px;padding:10px;font:inherit;background:var(--paper);color:var(--ink);resize:vertical}
-.enviar{appearance:none;border:0;border-radius:12px;background:var(--ink);color:var(--paper);font:700 17px inherit;font-family:inherit;min-height:54px;cursor:pointer}
+.enviar{appearance:none;border:0;border-radius:12px;background:var(--ink);color:var(--paper);font-weight:700;font-size:17px;font-family:inherit;min-height:54px;width:100%;cursor:pointer}
 .enviar[disabled]{opacity:.45;cursor:default}
 .aviso{font-size:14px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,var(--card))}
-.erro{color:var(--red);font-size:14px;min-height:1em}
+.erro{color:var(--red);font-size:14px}
+.erro:empty{display:none}
 .feito{text-align:center;padding:28px 16px}
 .feito .ok{font-size:48px}
 [hidden]{display:none!important}
