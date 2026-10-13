@@ -713,6 +713,22 @@ textarea{width:100%;resize:vertical;min-height:110px}
     <button class="btn-primary" onclick="apOK()"><i class="ti ti-check"></i> <span data-i18n="data.squad.addBtn">Add to squad</span></button>
   </div>
 </div>
+<!-- AUTOAVALIACAO: link do goleiro e respostas -->
+<div class="ap-ov" id="auOv">
+  <div class="ap-sh">
+    <div class="modal-hdr" style="margin-bottom:10px">
+      <h2 style="font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px"><i class="ti ti-link"></i> <span data-i18n="data.auto.link">Self-assessment link</span> · <span id="auNome"></span></h2>
+      <button class="modal-close" onclick="closeAuto()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <input type="text" id="auUrl" readonly style="width:100%;padding:9px 11px;border:0.5px solid var(--bd2);border-radius:var(--rm);background:var(--bg2);color:var(--tx);font-size:13px;font-family:monospace;margin-bottom:9px" onclick="this.select()">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn-primary" style="flex:1;min-width:140px" onclick="copyAuto()"><i class="ti ti-copy"></i> <span data-i18n="data.auto.copy">Copy link</span></button>
+      <button class="btn-primary" style="flex:1;min-width:140px;background:#25D366" onclick="whatsAuto()"><i class="ti ti-brand-whatsapp"></i> <span data-i18n="data.auto.whats">Send by WhatsApp</span></button>
+    </div>
+    <div id="auLista" style="font-size:13px;max-height:40vh;overflow:auto"></div>
+    <button onclick="revokeAuto()" style="margin-top:10px;background:none;border:0;color:var(--mt);font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit"><span data-i18n="data.auto.revoke">Turn off and create a new link</span></button>
+  </div>
+</div>
 <!-- GOALKEEPER STATUS MODAL -->
 <div class="st-ov" id="stOv">
   <div class="st-sh">
@@ -1208,6 +1224,9 @@ function rtListen(){
     } else if(Array.isArray(ST.trainingTypes) && ST.trainingTypes.length){
       _set(uPath("trainingTypes"), ST.trainingTypes);
     }
+    /* autoavaliacao: as respostas chegam pela mesma escuta (load/auto/<goleiro>/<data>) */
+    const autoNova=rem.auto||{};
+    if(JSON.stringify(autoNova)!==JSON.stringify(ST.auto||{})){ ST.auto=autoNova; changed=true; try{ renderAutoLista(); }catch(e){} }
     const antes=JSON.stringify([ST.players,ST.sessions]);
     let semVoo=false;
     try{ semVoo = !!(window.fluxdb && fluxdb._internal && fluxdb._internal.pending() === 0); }catch(e){}
@@ -1296,6 +1315,7 @@ function squadCard(p){
     ?`<button class="sq-btn" onclick="selGo('${p.id}','pre')"><i class="ti ti-sun" style="font-size:12px"></i> <span data-i18n="data.nav.pre">Pre</span></button>
       <button class="sq-btn" onclick="selGo('${p.id}','post')"><i class="ti ti-moon" style="font-size:12px"></i> <span data-i18n="data.nav.post">Post</span></button>
       <button class="sq-btn" onclick="openST('${p.id}')" title="${_esc(TX("data.st.setStatus"))}"><i class="ti ti-user-exclamation" style="font-size:12px"></i></button>
+      <button class="sq-btn" onclick="openAuto('${p.id}')" title="${_esc(TX("data.auto.link"))}" aria-label="${_esc(TX("data.auto.link"))}"><i class="ti ti-link" style="font-size:12px"></i></button>
       <button class="sq-btn sq-del" onclick="delPl('${p.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>`
     :`<button class="sq-btn sq-back" onclick="reativar('${p.id}')"><i class="ti ti-rotate" style="font-size:12px"></i> <span data-i18n="data.st.reactivate">Reactivate</span></button>
       <button class="sq-btn" onclick="openST('${p.id}')"><i class="ti ti-user-exclamation" style="font-size:12px"></i></button>
@@ -1345,6 +1365,68 @@ window.delPl=function(id){
   save();renderSquad();renderPSelect();
   showToast(p.name+" removed.");
   rtDeletePlayer(id);
+};
+
+/* ── AUTOAVALIACAO DO GOLEIRO ──────────────────────────────
+   Link FIXO por goleiro, sem login (o codigo e a credencial), para responder todo dia humor, sono e
+   alimentacao em mod_autoavaliacao.html. O link mora na colecao autoavaliacao_links (so o tecnico dono
+   ve); as respostas chegam em <temporada>/load/auto/<goleiro>/<AAAA-MM-DD>, pela mesma escuta do modulo. */
+let _auPid=null, _auUrl="";
+function _pbAuto(){ try{ return (window.fluxdb&&fluxdb._internal)?fluxdb._internal.pb():null; }catch(e){ return null; } }
+function _tokenAuto(){ const a=new Uint8Array(24); crypto.getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,"0")).join(""); }
+async function _linkAuto(pid,novo){
+  const pb=_pbAuto(); if(!pb||!_uid) throw new Error("sem conexao");
+  const base=scopeRoot().replace(/\/load$/,"");
+  const col=pb.collection("autoavaliacao_links");
+  let r=null;
+  try{ r=await col.getFirstListItem(pb.filter("owner = {:o} && base = {:b} && playerId = {:p} && ativo = true",{o:_uid,b:base,p:pid}),{requestKey:null}); }
+  catch(e){ if(e&&e.status&&e.status!==404) throw e; }
+  if(r&&novo){ await col.update(r.id,{ativo:false},{requestKey:null}); r=null; }
+  if(!r) r=await col.create({owner:_uid,base:base,playerId:pid,playerName:(ST.players[pid]||{}).name||"",
+                             clubName:(ST.brand&&ST.brand.name)||"",token:_tokenAuto(),ativo:true},{requestKey:null});
+  return location.origin+"/mod_autoavaliacao.html?t="+r.token;
+}
+function _autoDoGoleiro(pid){
+  const a=(ST.auto&&ST.auto[pid])||{};
+  return Object.keys(a).map(k=>a[k]).filter(x=>x&&x.date).sort((x,y)=>y.date.localeCompare(x.date));
+}
+function _rostoAuto(n){ return ["","😫","😕","😐","🙂","😄"][n]||"—"; }
+function renderAutoLista(){
+  const el=document.getElementById("auLista"); if(!el||!_auPid) return;
+  const lst=_autoDoGoleiro(_auPid).slice(0,14);
+  if(!lst.length){ el.innerHTML=`<div style="color:var(--mt)">${_esc(TX("data.auto.none"))}</div>`; return; }
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse"><tr style="color:var(--mt);font-size:11px;text-align:left">
+    <th style="padding:4px 0"></th><th>${_esc(TX("data.auto.mood"))}</th><th>${_esc(TX("data.auto.sleep"))}</th><th>${_esc(TX("data.auto.food"))}</th></tr>`+
+    lst.map(x=>`<tr style="border-top:0.5px solid var(--bd2)"><td style="padding:5px 0;white-space:nowrap">${fd(x.date)}</td>
+      <td>${_rostoAuto(x.humor)} ${x.humor}</td><td>${_rostoAuto(x.sono)} ${x.sono}</td><td>${_rostoAuto(x.alimentacao)} ${x.alimentacao}</td></tr>`+
+      (x.obs?`<tr><td></td><td colspan="3" style="color:var(--mt);padding-bottom:5px">“${_esc(x.obs)}”</td></tr>`:"")).join("")+`</table>`;
+}
+window.openAuto=async function(pid){
+  _auPid=pid; _auUrl="";
+  document.getElementById("auNome").textContent=(ST.players[pid]||{}).name||"";
+  const inp=document.getElementById("auUrl"); inp.value="…";
+  renderAutoLista();
+  document.getElementById("auOv").classList.add("open");
+  try{ _auUrl=await _linkAuto(pid,false); inp.value=_auUrl; }
+  catch(e){ inp.value=""; showToast(TX("data.auto.err")+": "+((e&&e.message)||e),"err"); }
+};
+window.closeAuto=function(){ document.getElementById("auOv").classList.remove("open"); _auPid=null; };
+window.copyAuto=function(){
+  if(!_auUrl) return;
+  const ok=()=>showToast(TX("data.auto.copied"));
+  try{ navigator.clipboard.writeText(_auUrl).then(ok,()=>{ document.getElementById("auUrl").select(); document.execCommand("copy"); ok(); }); }
+  catch(e){ document.getElementById("auUrl").select(); try{ document.execCommand("copy"); ok(); }catch(x){} }
+};
+window.whatsAuto=function(){
+  if(!_auUrl) return;
+  const msg=TX("data.auto.msg").split("{gk}").join((ST.players[_auPid]||{}).name||"")+" "+_auUrl;
+  window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener");
+};
+window.revokeAuto=async function(){
+  if(!_auPid||!confirm(TX("data.auto.revokeQ"))) return;
+  const inp=document.getElementById("auUrl"); inp.value="…";
+  try{ _auUrl=await _linkAuto(_auPid,true); inp.value=_auUrl; }
+  catch(e){ inp.value=""; showToast(TX("data.auto.err")+": "+((e&&e.message)||e),"err"); }
 };
 
 // Add player modal
@@ -1823,6 +1905,22 @@ function renderDashboard(){
     <div class="metric-card"><div class="mc-label">${TX("data.m.avgRPE")}</div><div class="mc-val">${aPSE}</div><div class="mc-sub">${TX("data.m.cr10")}</div></div>
     <div class="metric-card"><div class="mc-label">${TX("data.m.avgDur")}</div><div class="mc-val">${aDur}</div><div class="mc-sub">${TX("data.m.minutes")}</div></div>
     `+_wbCards;
+  /* autoavaliacao do goleiro: ultima resposta e media de 7 dias */
+  try{
+    const au=ST.currentPlayer?_autoDoGoleiro(ST.currentPlayer):[];
+    if(au.length){
+      const lim=new Date(Date.now()-7*864e5).toISOString().slice(0,10), sete=au.filter(x=>x.date>=lim);
+      const med=k=>sete.length?(sete.reduce((a,x)=>a+(x[k]||0),0)/sete.length).toFixed(1):"—";
+      const u=au[0];
+      const mr=document.getElementById("metricsRow");
+      if(mr) mr.insertAdjacentHTML("beforeend",`<div style="grid-column:1/-1" class="metric-card"><div class="mc-label">${_esc(TX("data.auto.title"))} · ${fd(u.date)}</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin-top:4px">
+          <span>${_esc(TX("data.auto.mood"))}: ${_rostoAuto(u.humor)} <b>${u.humor}</b></span>
+          <span>${_esc(TX("data.auto.sleep"))}: ${_rostoAuto(u.sono)} <b>${u.sono}</b></span>
+          <span>${_esc(TX("data.auto.food"))}: ${_rostoAuto(u.alimentacao)} <b>${u.alimentacao}</b></span></div>
+        <div class="mc-sub">${_esc(TX("data.auto.avg7"))}: ${med("humor")} · ${med("sono")} · ${med("alimentacao")}${u.obs?` — “${_esc(u.obs)}”`:""}</div></div>`);
+    }
+  }catch(e){ console.warn("[FluxGK] autoavaliacao no painel:",e); }
   if(attHtml){const ar=document.getElementById("metricsRow");if(ar)ar.insertAdjacentHTML("beforeend",'<div style="grid-column:1/-1"><div data-i18n="data.pre.attendance" style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mt);margin-bottom:4px">Attendance</div>'+attHtml+'</div>');}
   renderCharts(post,pre);
 }

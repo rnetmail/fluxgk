@@ -7,7 +7,7 @@ COPY nginx/conf.d/ /etc/nginx/conf.d/
 # O site inteiro (páginas na raiz do repositório + static/ + assets/)
 COPY index.html mod_planner.html mod_xg.html mod_stats.html mod_minutes.html \
      mod_video.html mod_data.html mod_periodization.html mod_scouting.html \
-     mod_profile.html tatica3d.html \
+     mod_profile.html tatica3d.html mod_autoavaliacao.html \
      fluxgk-i18n.js manifest.json manifest.webmanifest \
      favicon.png icone-180.png icone-512.png \
      /usr/share/nginx/html/

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>FluxGK · Autoavaliação</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<script src="fluxgk-i18n.js"></script>
+<style>
+/* Página PÚBLICA da autoavaliação do goleiro (sem login): o código no link é a credencial.
+   Feita para o celular: três escalas de 1 a 5 e uma observação opcional. */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#0a0a0a;--paper:#fafaf7;--card:#fff;--mute:#6b6b6b;--faint:#e5e5e5;--accent:#1D9E75;--red:#c0392b}
+@media (prefers-color-scheme:dark){:root{--ink:#f2f2ee;--paper:#111312;--card:#1a1d1b;--mute:#9a9e9b;--faint:#2b302d}}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 'Space Grotesk',system-ui,sans-serif;min-height:100vh;
+  padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom))}
+main{max-width:480px;margin:0 auto;padding-top:20px;display:flex;flex-direction:column;gap:14px}
+.marca{font:700 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+h1{font-size:24px;line-height:1.2;text-wrap:balance}
+.sub{color:var(--mute);font-size:14px}
+.card{background:var(--card);border:1px solid var(--faint);border-radius:14px;padding:16px}
+fieldset{border:0}
+legend{font-weight:700;font-size:17px;margin-bottom:10px}
+.escala{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.escala button{appearance:none;border:1px solid var(--faint);background:var(--paper);border-radius:12px;min-height:58px;
+  font-size:26px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink)}
+.escala button small{font:600 10px 'JetBrains Mono',monospace;color:var(--mute)}
+.escala button[aria-pressed="true"]{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--card))}
+.escala button:focus-visible,textarea:focus-visible,.enviar:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.extremos{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px}
+textarea{width:100%;min-height:84px;border:1px solid var(--faint);border-radius:10px;padding:10px;font:inherit;background:var(--paper);color:var(--ink);resize:vertical}
+.enviar{appearance:none;border:0;border-radius:12px;background:var(--ink);color:var(--paper);font:700 17px inherit;font-family:inherit;min-height:54px;cursor:pointer}
+.enviar[disabled]{opacity:.45;cursor:default}
+.aviso{font-size:14px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+.erro{color:var(--red);font-size:14px;min-height:1em}
+.feito{text-align:center;padding:28px 16px}
+.feito .ok{font-size:48px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div class="marca">FluxGK</div>
+  <div id="carregando" class="sub" data-i18n="auto.loading">Carregando…</div>
+
+  <div id="invalido" class="card" hidden>
+    <h1 data-i18n="auto.invalidTitle">Link inválido</h1>
+    <p class="sub" data-i18n="auto.invalidText">Este link não existe mais ou foi desativado. Peça um novo ao seu treinador.</p>
+  </div>
+
+  <form id="form" hidden novalidate>
+    <h1 id="ola"></h1>
+    <p class="sub" id="contexto"></p>
+    <p class="aviso" id="jaRespondeu" hidden data-i18n="auto.alreadyToday">Você já respondeu hoje. Enviar de novo substitui a resposta.</p>
+    <div class="card" id="perguntas"></div>
+    <div class="card">
+      <label for="obs" style="font-weight:700;display:block;margin-bottom:8px" data-i18n="auto.obs">Algo mais que o treinador deva saber? (opcional)</label>
+      <textarea id="obs" maxlength="500"></textarea>
+    </div>
+    <p class="erro" id="erro" role="alert"></p>
+    <button class="enviar" id="enviar" type="submit" disabled data-i18n="auto.send">Enviar</button>
+  </form>
+
+  <div id="feito" class="card feito" hidden>
+    <div class="ok">✅</div>
+    <h1 data-i18n="auto.thanks">Recebido, obrigado!</h1>
+    <p class="sub" data-i18n="auto.thanksText">Seu treinador já pode ver. Volte amanhã pelo mesmo link.</p>
+  </div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var T = function(k, f){ try{ var v = TX(k); return (v && v !== k) ? v : f; }catch(e){ return f; } };
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var API = '/api/fluxgk/auto/' + encodeURIComponent(token);
+  var ROSTOS = ['😫','😕','😐','🙂','😄'];
+  var PERGUNTAS = [
+    { k:'humor',       t:T('auto.q.mood','Como está o seu humor hoje?'),   lo:T('auto.lo.mood','Muito mal'),   hi:T('auto.hi.mood','Ótimo') },
+    { k:'sono',        t:T('auto.q.sleep','Como foi o seu sono?'),          lo:T('auto.lo.sleep','Péssimo'),     hi:T('auto.hi.sleep','Excelente') },
+    { k:'alimentacao', t:T('auto.q.food','Como foi a sua alimentação?'),    lo:T('auto.lo.food','Muito ruim'),  hi:T('auto.hi.food','Muito boa') }
+  ];
+  var resp = {};
+  var $ = function(id){ return document.getElementById(id); };
+
+  function montar(){
+    $('perguntas').innerHTML = PERGUNTAS.map(function(p, i){
+      return '<fieldset' + (i ? ' style="margin-top:18px"' : '') + '><legend>' + p.t + '</legend><div class="escala" role="group">' +
+        ROSTOS.map(function(r, n){
+          return '<button type="button" data-k="' + p.k + '" data-n="' + (n + 1) + '" aria-pressed="false" aria-label="' + p.t + ' ' + (n + 1) + '/5">' +
+                 r + '<small>' + (n + 1) + '</small></button>';
+        }).join('') + '</div><div class="extremos"><span>' + p.lo + '</span><span>' + p.hi + '</span></div></fieldset>';
+    }).join('');
+    $('perguntas').addEventListener('click', function(ev){
+      var b = ev.target.closest('button[data-k]'); if(!b) return;
+      resp[b.dataset.k] = Number(b.dataset.n);
+      document.querySelectorAll('button[data-k="' + b.dataset.k + '"]').forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      $('enviar').disabled = !PERGUNTAS.every(function(p){ return resp[p.k]; });
+    });
+  }
+  function marcar(r){
+    PERGUNTAS.forEach(function(p){
+      if(!r || !r[p.k]) return;
+      resp[p.k] = r[p.k];
+      var b = document.querySelector('button[data-k="' + p.k + '"][data-n="' + r[p.k] + '"]'); if(b) b.setAttribute('aria-pressed', 'true');
+    });
+    if(r && r.obs) $('obs').value = r.obs;
+    $('enviar').disabled = !PERGUNTAS.every(function(p){ return resp[p.k]; });
+  }
+  function dataBonita(iso){
+    try{ return new Date(iso + 'T12:00').toLocaleDateString(FluxGKI18n.getLang() === 'pt' ? 'pt-BR' : 'en-GB', { weekday:'long', day:'numeric', month:'long' }); }
+    catch(e){ return iso; }
+  }
+
+  fetch(API).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); }).then(function(d){
+    $('carregando').hidden = true; $('form').hidden = false;
+    $('ola').textContent = T('auto.hello', 'Olá') + ', ' + (d.goleiro || '') + '!';
+    $('contexto').textContent = (d.clube ? d.clube + ' · ' : '') + dataBonita(d.hoje);
+    montar();
+    if(d.resposta){ $('jaRespondeu').hidden = false; marcar(d.resposta); }
+  }).catch(function(){ $('carregando').hidden = true; $('invalido').hidden = false; });
+
+  $('form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var b = $('enviar'); b.disabled = true; $('erro').textContent = '';
+    var corpo = { humor: resp.humor, sono: resp.sono, alimentacao: resp.alimentacao, obs: $('obs').value.trim() };
+    fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(corpo) })
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { ok: r.ok, j: j }; }); })
+      .then(function(x){
+        if(x.ok){ $('form').hidden = true; $('feito').hidden = false; return; }
+        $('erro').textContent = (x.j && x.j.message) || T('auto.err', 'Não foi possível enviar. Tente de novo.'); b.disabled = false;
+      })
+      .catch(function(){ $('erro').textContent = T('auto.offline', 'Sem conexão. Tente de novo quando tiver internet.'); b.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

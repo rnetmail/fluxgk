@@ -72,6 +72,7 @@ jobs:
             -e FLUXGK_ADMINS=chefe@ci.local -e PB_ADMIN_EMAIL=ci@ci.local -e PB_ADMIN_PASSWORD=ci-senha-123456 fluxgk-pb-ci
           for i in $(seq 40); do curl -sf http://127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
           node tools/smoke-versoes.mjs http://127.0.0.1:8090
+          node tools/smoke-auto.mjs http://127.0.0.1:8090
 
       - name: Logs do PocketBase (se falhou)
         if: failure()
