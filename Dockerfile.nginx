@@ -17,7 +17,7 @@ COPY static/ /usr/share/nginx/html/static/
 COPY assets/ /usr/share/nginx/html/assets/
 
 # Versão (1.<ano>.<seq>, gravada pelo workflow `promover`) e o script que, na partida, escreve
-# /versao.json com a versão, o ambiente da stack (AMBIENTE) e o commit do deploy (GIT_COMMIT).
+# /versao.json com a versão, o ambiente da stack (AMBIENTE) e a impressão digital da imagem (BUILD).
 COPY VERSION /etc/fluxgk/VERSION
 COPY docker/nginx-versao.sh /docker-entrypoint.d/40-fluxgk-versao.sh
 RUN chmod +x /docker-entrypoint.d/40-fluxgk-versao.sh

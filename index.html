@@ -997,7 +997,7 @@ boot();
     if(!v || !v.versao) return;
     var amb = String(v.ambiente || 'prd').toLowerCase();
     var el = document.getElementById('app-versao');
-    if(el) el.textContent = 'v' + v.versao + (amb !== 'prd' ? ' · ' + amb.toUpperCase() : '') + (v.commit ? ' · ' + String(v.commit).slice(0,7) : '');
+    if(el) el.textContent = 'v' + v.versao + (amb !== 'prd' ? ' · ' + amb.toUpperCase() : '') + (v.build ? ' · ' + String(v.build).slice(0,7) : '');
     if(amb === 'prd') return;
     document.title = '[' + amb.toUpperCase() + '] ' + document.title;
     var f = document.createElement('div');

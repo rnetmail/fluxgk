@@ -48,10 +48,8 @@ services:
       - "127.0.0.1:${PORTA_HTTP}:80"
     environment:
       TZ: ${TZ:-America/Bahia}
-      # Vão para /versao.json: o ambiente da stack (prd | hml) e o commit que o CI mandou subir
-      # (o webhook do Portainer recebe ?GIT_COMMIT=<sha>).
+      # Vai para /versao.json e para o rodapé do app: prd | hml.
       AMBIENTE: ${AMBIENTE:-prd}
-      GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       pocketbase:
         condition: service_healthy
