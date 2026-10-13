@@ -68,7 +68,7 @@
 
 ### Correções
 
-- [ ] T-12, **Rascunho do jogo em andamento:** gravar `CUR` continuamente no navegador (chave por `uid` + `dataPath`) e, com rede, em `<dataPath>/stats/draft`; oferecer retomar ao abrir; apagar ao salvar
+- [x] T-12, **Rascunho do jogo em andamento:** gravar `CUR` continuamente no navegador (chave por `uid` + `dataPath`) e, com rede, em `<dataPath>/stats/draft`; oferecer retomar ao abrir; apagar ao salvar — **feito em 13/10** (`guardarRascunho`/`oferecerRascunho`/`apagarRascunho`; caminho `<dataPath>/stats/rascunho`; ponta a ponta em HML: recarregar e outro aparelho recuperam o jogo, salvar apaga o rascunho)
   - Origem no legado: `CUR` (`:830`), `saveShot`, `saveOffAction`, `saveGame`
   - Critério de pronto: Critério de Aceitação 5; funciona sem rede
   - Confiança: 🟢 (risco) / 🟢 (D-16: rascunho no aparelho a cada lance e na nuvem a cada minuto)

@@ -477,6 +477,13 @@ let _currentImgData  = null;
 let _sessionFormState = {};
 let _editingSessionId = null; // id of session being re-edited
 let _editPostState = null;    // post-training state when re-editing
+/* Anotacoes do pos-treino por goleiro e por exercicio (D-02). As caixas eram desenhadas e nunca lidas:
+   o que o tecnico escrevia se perdia ao salvar. Agora o texto vive aqui (sobrevive a redesenhos da tela)
+   e vai na sessao: `postGkNotes` = [{gk, nota}] e `postNote` em cada exercicio. */
+let _postNotas = { gk: {}, ex: {} };
+function _escP(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function _notaGk(el){ _postNotas.gk[el.dataset.gkNota]=el.value; }
+function _notaEx(el){ _postNotas.ex[el.dataset.exNota]=el.value; }
 let _clubBadge = null; // base64 badge image
 let _clubColor = '#0A0A0A'; // vem do HUB
 
@@ -1200,7 +1207,7 @@ function refreshPost(){
   document.getElementById('kpiGk').textContent   = gks.length;
 
   document.getElementById('postPN').innerHTML = gks.length
-    ? gks.map(g2=>`<div style="margin-bottom:9px;padding:12px;background:var(--paper);border-radius:4px;border:1px solid var(--faint)"><div style="font-weight:600;font-size:13px;margin-bottom:7px">🧤 ${g2}</div><textarea class="fi fta" style="min-height:56px" placeholder="Performance notes for ${g2}..."></textarea></div>`).join('')
+    ? gks.map(g2=>`<div style="margin-bottom:9px;padding:12px;background:var(--paper);border-radius:4px;border:1px solid var(--faint)"><div style="font-weight:600;font-size:13px;margin-bottom:7px">🧤 ${_escP(g2)}</div><textarea class="fi fta" style="min-height:56px" placeholder="Performance notes for ${_escP(g2)}..." data-gk-nota="${_escP(g2)}" oninput="_notaGk(this)">${_escP(_postNotas.gk[g2]||'')}</textarea></div>`).join('')
     : '<div style="font-size:13px;color:var(--mute)">'+TX('plan.addGkFirst')+'</div>';
 
   document.getElementById('postExC').innerHTML = exercises.length
@@ -1213,7 +1220,7 @@ function refreshPost(){
           </div>
           ${ex.img?`<img src="${ex.img}" style="width:100%;max-height:160px;object-fit:cover;border-radius:4px;margin-bottom:8px;border:1px solid var(--faint)"/>`:''}
           ${ex.goal?`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink);margin-bottom:8px;padding:7px 10px;background:rgba(0,0,0,.03);border-radius:3px">→ ${ex.goal}</div>`:''}
-          <textarea class="fi fta" style="min-height:56px" placeholder="${TX('plan.ph.postObs')}"></textarea>
+          <textarea class="fi fta" style="min-height:56px" placeholder="${TX('plan.ph.postObs')}" data-ex-nota="${_escP(ex.id)}" oninput="_notaEx(this)">${_escP(_postNotas.ex[ex.id]!=null?_postNotas.ex[ex.id]:(ex.postNote||''))}</textarea>
         </div>`).join('')
     : '<div style="font-size:13px;color:var(--mute)">'+TX('plan.noExercises')+'</div>';
 }
@@ -1254,6 +1261,8 @@ function editSessionFromLibrary(id){
   _sessionFormState['sMeth']    = s.method||'';
 
   // Restore post-training state
+  _postNotas = { gk: {}, ex: {} };
+  (s.postGkNotes||[]).forEach(function(n){ if(n&&n.gk) _postNotas.gk[n.gk]=n.nota||''; });
   _editPostState = {
     postPos: s.postPositive||'',
     postImp: s.postImprovement||'',
@@ -1695,6 +1704,10 @@ function buildReportHTML(sessions){
       {label:TX('plan.nextAdjust'),     val:s.postNext},
     ].filter(p=>p&&p.val);
 
+    /* anotacoes por goleiro e por exercicio (D-02) */
+    (s.postGkNotes||[]).forEach(function(n){ if(n&&n.nota) postItems.push({label:'🧤 '+_escP(n.gk), val:_escP(n.nota)}); });
+    (s.exercises||[]).forEach(function(ex,i){ if(ex&&ex.postNote) postItems.push({label:'#'+String(i+1).padStart(2,'0')+' '+_escP(ex.name||''), val:_escP(ex.postNote)}); });
+
     if(!isPreview && postItems.length){
       html += `<div class="no-break" style="margin-top:14pt;margin-bottom:14pt">
         <div class="rpt-sec-hdr" style="background:${P};padding:10pt 16pt 8pt">
@@ -2087,6 +2100,7 @@ function _newSession(){
   rating = 0;
   _editingSessionId = null;
   _editPostState = null;
+  _postNotas = { gk: {}, ex: {} };
   ['sDate','sTime','sDur','sType','sPlayers','sObj','sMeth'].forEach(function(id){
     delete _sessionFormState[id];
     var el = document.getElementById(id); if(el) el.value = '';
@@ -2106,8 +2120,14 @@ function _persistSessionToLibrary(){
     date:      g('sDate'), time: g('sTime'), duration: g('sDur'), type: g('sType'),
     players:   g('sPlayers'), objective: g('sObj'), method: g('sMeth'),
     clubName:  _sessionFormState._hdrTitle || TX('plan.trainingSession'),
-    exercises: exercises.map(e=>({...e})),
+    exercises: exercises.map(e=>{
+      const x={...e}, n=_postNotas.ex[e.id];
+      if(n!=null){ if(String(n).trim()) x.postNote=String(n); else delete x.postNote; }
+      return x;
+    }),
     rating, objMet,
+    postGkNotes: Object.keys(_postNotas.gk).filter(k=>String(_postNotas.gk[k]||'').trim())
+                   .map(k=>({gk:k, nota:String(_postNotas.gk[k])})),
     postPositive:   g('postPos'), postImprovement:g('postImp'),
     postAffordances:g('postAff'), postConstraints:g('postCon'),
     postEmergent:   g('postEme'), postNext: g('postNxt'),
