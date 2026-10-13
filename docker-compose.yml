@@ -3,7 +3,7 @@
 #   fluxgk      (branch main)    → PORTA_HTTP=3010 → fluxgk.rstecbr.com.br
 # A diferença entre elas é SÓ a variável de ambiente da stack. Um compose, dois ambientes.
 # Cada stack tem o próprio volume (<stack>_pb_data): HML tem base de dados própria.
-# Deploy: CI do GitHub → webhook do Portainer (ver .github/workflows/ci.yml e promover.yml).
+# Deploy: CI do GitHub → webhook do Portainer (ver .github/workflows/ci.yml e implantar.yml).
 #
 # DECISÕES, e o porquê de cada uma:
 #  · A porta do host vem de ${PORTA_HTTP} e é ligada em 127.0.0.1 — o Hestia é o
@@ -30,6 +30,11 @@ services:
       PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD}
       # Cifra os dados sensíveis gravados em pb_data. Gere com: openssl rand -hex 16
       PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:-}
+      # Tela de versões (pb_hooks/): só PRD troca de versão; admins por e-mail; a chave do GitHub só
+      # dispara o workflow `implantar` deste repositório (fine-grained, Actions: write).
+      AMBIENTE: ${AMBIENTE:-prd}
+      FLUXGK_ADMINS: ${FLUXGK_ADMINS:-}
+      GH_TOKEN_IMPLANTAR: ${GH_TOKEN_IMPLANTAR:-}
       TZ: ${TZ:-America/Bahia}
     volumes:
       - pb_data:/pb/pb_data

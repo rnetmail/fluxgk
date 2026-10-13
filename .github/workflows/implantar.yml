@@ -1,0 +1,118 @@
+# FluxGK · troca de versão em PRD — chamada pela tela Configurações → Versões do app (admin) ou à mão
+# em Actions → implantar → Run workflow. É a decisão humana da esteira: nada sobe para PRD sem ela.
+#
+#   acao=nova       leva o que está em develop (CI verde): numera 1.<ano>.<seq>, grava VERSION, cria a
+#                   tag e a release (notas = commits desde a anterior) e avança main por fast-forward.
+#   acao=existente  põe main numa versão já publicada (para trás ou para frente). Só o código volta:
+#                   migration tem de ser compatível com a versão anterior (expandir antes, contrair depois).
+#
+# Em seguida reimplanta PRD pelo webhook do Portainer e espera /versao.json mostrar a versão.
+# O título da execução vira o histórico da tela: "nova → 1.2026.002 · por fulano@clube".
+name: implantar
+run-name: "${{ inputs.acao }}${{ inputs.versao && format(' → {0}', inputs.versao) || '' }} · por ${{ inputs.solicitante || github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "nova (o que está em develop) ou existente (uma versão já publicada)"
+        type: choice
+        options: [nova, existente]
+        default: nova
+      versao:
+        description: "Só para acao=existente: a versão (ex.: 1.2026.001)"
+        required: false
+        default: ""
+      solicitante:
+        description: "Quem pediu (preenchido pelo app)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: implantar
+  cancel-in-progress: false
+
+jobs:
+  prd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: prd
+      url: https://fluxgk.rstecbr.com.br
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Preparar
+        run: |
+          git config user.name "fluxgk-release"
+          git config user.email "fluxgk-release@users.noreply.github.com"
+          git fetch -q --tags origin main
+
+      - name: Nova versão a partir de develop
+        if: inputs.acao == 'nova'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          R=$(gh run list --workflow ci --branch develop --commit "$SHA" --event push --json conclusion --jq '.[0].conclusion')
+          echo "CI de $SHA: ${R:-nenhum}"
+          test "$R" = "success" || { echo "::error::o CI de develop ($SHA) não está verde"; exit 1; }
+          git merge-base --is-ancestor origin/main HEAD || { echo "::error::main não é ancestral de develop; não dá para avançar por fast-forward"; exit 1; }
+          ANO=$(TZ=America/Bahia date +%Y)
+          ULT=$(git tag -l "1.${ANO}.*" | sort -V | tail -1)
+          ANT=$(git tag -l "1.*" | sort -V | tail -1)
+          SEQ=$(( ${ULT:+10#${ULT##*.}} + 1 ))
+          V=$(printf '1.%s.%03d' "$ANO" "$SEQ")
+          echo "anterior: ${ANT:-nenhuma}  nova: $V"
+          NOTAS=$(git log --no-merges --format='- %s' ${ANT:+$ANT..}HEAD | grep -v '^- release: ' || true)
+          echo "$V" > VERSION
+          git add VERSION
+          git commit -q -m "release: $V"
+          git tag -a "$V" -m "FluxGK $V"
+          git push -q origin HEAD:develop
+          git push -q origin "$V"
+          git push -q origin HEAD:main
+          printf 'Pedida por %s.\n\n%s\n' "${{ inputs.solicitante || github.actor }}" "$NOTAS" > /tmp/notas.md
+          gh release create "$V" --verify-tag --title "FluxGK $V" --notes-file /tmp/notas.md
+          echo "V=$V" >> "$GITHUB_ENV"
+
+      - name: Versão já publicada
+        if: inputs.acao == 'existente'
+        env:
+          V: ${{ inputs.versao }}
+        run: |
+          echo "$V" | grep -Eq '^1\.[0-9]{4}\.[0-9]{3}$' || { echo "::error::versão inválida: $V"; exit 1; }
+          git rev-parse -q --verify "refs/tags/$V" >/dev/null || { echo "::error::a tag $V não existe"; exit 1; }
+          C=$(git rev-list -n1 "$V")
+          echo "main: $(git rev-parse origin/main) → $C ($V)"
+          git push -q --force origin "$C:refs/heads/main"
+          echo "V=$V" >> "$GITHUB_ENV"
+
+      - name: Reimplantar PRD no Portainer
+        env:
+          PRD: ${{ secrets.PORTAINER_WEBHOOK_PRD }}
+          HML: ${{ secrets.PORTAINER_WEBHOOK_HML }}
+        run: |
+          test -n "$PRD" || { echo "::error::falta o secret PORTAINER_WEBHOOK_PRD"; exit 1; }
+          curl -fsS -X POST "$PRD"
+          # versão nova grava VERSION em develop por GITHUB_TOKEN, que não dispara o CI: HML também sobe
+          if [ "${{ inputs.acao }}" = "nova" ] && [ -n "$HML" ]; then curl -fsS -X POST "$HML" || true; fi
+
+      - name: Esperar PRD na versão
+        run: |
+          sleep 45   # o Portainer recria os contêineres; não conferir o antigo
+          for i in $(seq 60); do
+            J=$(curl -fsS "https://fluxgk.rstecbr.com.br/versao.json?t=$(date +%s)" || true)
+            echo "$J" | grep -q "\"versao\":\"${V}\"" && { echo "no ar: $J"; break; }
+            sleep 10
+          done
+          echo "$J" | grep -q "\"versao\":\"${V}\"" || { echo "::error::PRD não mostrou $V em 10 min (último: $J)"; exit 1; }
+          for n in 1 2; do sleep 15; curl -fsS https://fluxgk.rstecbr.com.br/api/health >/dev/null || { echo "::error::PRD instável"; exit 1; }; done
+          echo "### FluxGK $V em produção" >> "$GITHUB_STEP_SUMMARY"

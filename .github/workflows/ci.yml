@@ -3,7 +3,7 @@
 # Fluxo (decisão do dono, 13/10/2026): todo ajuste, melhoria e desenvolvimento entra em `develop`,
 # que É o ambiente de homologação. Push em `develop` → verificação → o Portainer reimplanta a stack
 # `fluxgk-hml` (hml.fluxgk.rstecbr.com.br, base de dados própria). Produção (`main`, stack `fluxgk`)
-# só muda pelo workflow `promover`, que numera a versão 1.<ano>.<seq>.
+# só muda pelo workflow `implantar` (botão do admin em Configurações → Versões), que numera 1.<ano>.<seq>.
 #
 # O deploy é o webhook da stack no Portainer (secret PORTAINER_WEBHOOK_HML): ele clona o branch de novo
 # e reconstrói as imagens. Para saber que o commit certo está no ar, este job constrói a mesma imagem do
@@ -59,6 +59,16 @@ jobs:
             -e PB_ADMIN_EMAIL=ci@ci.local -e PB_ADMIN_PASSWORD=ci-senha-123456 fluxgk-pb-ci
           for i in $(seq 40); do curl -sf http://127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
           PB_URL=http://127.0.0.1:8090 node tools/smoke-adapter.mjs
+
+      - name: Rotas de versão (pb_hooks) respondem e protegem
+        env:
+          GH_TOKEN_IMPLANTAR: ${{ github.token }}
+        run: |
+          docker rm -f pb >/dev/null
+          docker run -d --name pb -p 127.0.0.1:8090:8090 -e AMBIENTE=hml -e GH_TOKEN_IMPLANTAR \
+            -e FLUXGK_ADMINS=chefe@ci.local -e PB_ADMIN_EMAIL=ci@ci.local -e PB_ADMIN_PASSWORD=ci-senha-123456 fluxgk-pb-ci
+          for i in $(seq 40); do curl -sf http://127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
+          node tools/smoke-versoes.mjs http://127.0.0.1:8090
 
       - name: Logs do PocketBase (se falhou)
         if: failure()

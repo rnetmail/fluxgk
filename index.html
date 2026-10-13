@@ -163,6 +163,17 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 .btd{background:#fff;border:1px solid var(--faint);color:var(--red);margin-top:10px}
 .sec{border-top:1px solid var(--faint);margin:20px 0 16px;padding-top:16px}
 .sect{font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.11em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+.vbox{border:1px solid var(--faint);border-radius:9px;padding:12px;margin-bottom:12px;background:#fff}
+.vnew{border-color:var(--amber)}
+.vtit{font-weight:700;font-size:14px;margin-bottom:6px}
+.vsub{font-size:12px;color:var(--mute);line-height:1.5}
+.vlist{list-style:none;margin:6px 0 0;padding:0;font-size:12px;line-height:1.5}
+.vlist li{padding:6px 0;border-top:1px solid var(--faint);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vlist li:first-child{border-top:0}
+.vtag{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+.vlive{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--green);color:#fff;border-radius:4px;padding:2px 6px}
+.vbtn{margin-left:auto;font-size:12px;padding:6px 10px;border:1px solid var(--faint);border-radius:7px;background:#fff;cursor:pointer;font-family:inherit}
+.vok{color:var(--green)} .vfail{color:var(--red)}
 .lrow{display:flex;align-items:center;gap:11px;padding:11px;background:#fff;border:1px solid var(--faint);border-radius:10px;margin-bottom:8px;cursor:pointer;position:relative}
 .lrow.on{border-color:var(--ink);border-width:2px;padding:10px}
 .lrow:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
@@ -301,6 +312,12 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
     <label class="fl" for="s-meth" data-i18n="hub.methodology">Methodology</label>
     <input class="fi" id="s-meth" placeholder="Constraints-Led Approach">
     <button class="btn btp" onclick="saveSettings()" data-i18n="common.save">Save</button>
+    <!-- Versões: só aparece para administrador (o servidor responde 403 aos demais) -->
+    <div id="s-versoes" style="display:none">
+      <div class="sec"></div>
+      <div class="sect" data-i18n="hub.ver.title">Versions</div>
+      <div id="s-ver-corpo"></div>
+    </div>
     <div class="sec"></div>
     <button class="btn btd" onclick="doLogout()" data-i18n="common.signOut">Sign out</button>
   </div>
@@ -890,6 +907,7 @@ function openSettings(){
   document.getElementById('s-coach').value=APP.profile.coachName||'';
   document.getElementById('s-meth').value=APP.profile.methodology||'';
   document.getElementById('sh-set').classList.add('open');
+  carregarVersoes(false);
 }
 function closeSettings(){document.getElementById('sh-set').classList.remove('open');}
 async function saveSettings(){
@@ -988,6 +1006,82 @@ async function boot(){
   }
 }
 boot();
+
+/* ---------- VERSÕES (Configurações, só admin) ----------
+   O servidor (pb_hooks/versoes.pb.js) decide quem é admin e o que pode: aqui só se desenha. Trocar de
+   versão pede ao GitHub o workflow `implantar`, que reimplanta PRD; a tela espera /versao.json mudar e
+   recarrega. */
+var _verAlvo=null;
+function _escV(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function _txv(k,o){var s=TX('hub.ver.'+k);Object.keys(o||{}).forEach(function(x){s=s.split('{'+x+'}').join(o[x]);});return s;}
+function _dataV(iso){try{return new Date(iso).toLocaleString(FluxGKI18n.getLang()==='pt'?'pt-BR':'en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return iso||'';}}
+function _pbV(){return (window.fluxdb&&fluxdb._internal&&fluxdb._internal.pb)?fluxdb._internal.pb():null;}
+async function carregarVersoes(forcar){
+  var box=document.getElementById('s-versoes'),corpo=document.getElementById('s-ver-corpo'),pb=_pbV();
+  if(!box||!pb||!APP.uid){if(box)box.style.display='none';return;}
+  try{
+    var d=await pb.send('/api/fluxgk/versoes'+(forcar?'?atualizar=1':''),{method:'GET'});
+    box.style.display='';corpo.innerHTML=_htmlVersoes(d);
+  }catch(e){
+    if(e&&e.status===403){box.style.display='none';return;}
+    box.style.display='';
+    corpo.innerHTML='<div class="vsub vfail">'+_escV(TX('hub.ver.err'))+': '+_escV((e&&e.response&&e.response.message)||e.message||e)+'</div>';
+  }
+}
+function _htmlVersoes(d){
+  var noAr=(d.noAr&&d.noAr.versao)||'',h='';
+  h+='<div class="vsub">'+_escV(TX('hub.ver.live'))+': <span class="vtag">v'+_escV(noAr||'?')+'</span> · '+_escV(String(d.ambiente||'').toUpperCase())+'</div>';
+  if(d.emAndamento){
+    h+='<div class="vbox vnew"><div class="vtit">'+_escV(_txv('running',{t:d.emAndamento.titulo}))+'</div>'+
+       '<a class="vsub" href="'+_escV(d.emAndamento.url)+'" target="_blank" rel="noopener">GitHub ↗</a></div>';
+  }else if(d.nova){
+    var n=d.nova;
+    h+='<div class="vbox vnew"><div class="vtit">'+_escV(_txv(n.existente?'reapply':'newAvail',{v:n.versao}))+'</div>';
+    if(n.mudancas&&n.mudancas.length){
+      h+='<div class="vsub">'+_escV(TX('hub.ver.changes'))+':</div><ul class="vlist">'+
+        n.mudancas.slice(-12).reverse().map(function(m){return '<li><span class="vtag">'+_escV(m.sha)+'</span><span>'+_escV(m.msg)+'</span></li>';}).join('')+'</ul>';
+    }
+    if(!d.podeTrocar) h+='<div class="vsub" style="margin-top:8px">'+_escV(d.motivoSemTroca||TX('hub.ver.prdOnly'))+'</div>';
+    else if(!n.ciVerde) h+='<div class="vsub" style="margin-top:8px">'+_escV(_txv('ciPending',{s:n.ciEstado}))+'</div>';
+    else h+='<button class="btn btp" style="margin-top:10px" onclick="pedirVersao(\''+(n.existente?'existente':'nova')+'\',\''+_escV(n.versao)+'\')">'+_escV(_txv('update',{v:n.versao}))+'</button>';
+    h+='</div>';
+  }else{
+    h+='<div class="vsub" style="margin:8px 0 12px">'+_escV(TX('hub.ver.none'))+'</div>';
+  }
+  h+='<div class="sect" style="margin-top:14px">'+_escV(TX('hub.ver.published'))+'</div><ul class="vlist">';
+  (d.versoes||[]).forEach(function(v){
+    var ehNoAr=v.versao===noAr,mais=noAr&&v.versao.localeCompare(noAr,undefined,{numeric:true})>0;
+    h+='<li><a class="vtag" href="'+_escV(v.url)+'" target="_blank" rel="noopener" title="'+_escV(v.notas)+'">'+_escV(v.versao)+'</a>'+
+       '<span class="vsub">'+_escV(_dataV(v.data))+'</span>'+(ehNoAr?'<span class="vlive">'+_escV(TX('hub.ver.current'))+'</span>':'')+
+       ((!ehNoAr&&d.podeTrocar&&!d.emAndamento)?'<button class="vbtn" onclick="pedirVersao(\'existente\',\''+_escV(v.versao)+'\')">'+_escV(TX(mais?'hub.ver.use':'hub.ver.rollback'))+'</button>':'')+'</li>';
+  });
+  h+='</ul><div class="sect" style="margin-top:14px">'+_escV(TX('hub.ver.history'))+'</div><ul class="vlist">';
+  if(!(d.historico||[]).length) h+='<li class="vsub">'+_escV(TX('hub.ver.empty'))+'</li>';
+  (d.historico||[]).slice(0,15).forEach(function(x){
+    var r=x.estado!=='completed'?'…':(x.resultado==='success'?'<span class="vok">✓ '+_escV(TX('hub.ver.ok'))+'</span>':'<span class="vfail">✗ '+_escV(TX('hub.ver.fail'))+'</span>');
+    h+='<li><a href="'+_escV(x.url)+'" target="_blank" rel="noopener">'+_escV(x.titulo)+'</a><span class="vsub">'+_escV(_dataV(x.quando))+'</span><span style="margin-left:auto">'+r+'</span></li>';
+  });
+  return h+'</ul>';
+}
+async function pedirVersao(acao,versao){
+  if(!confirm(_txv(acao==='nova'?'confirmNew':'confirmBack',{v:versao})))return;
+  var pb=_pbV();
+  try{
+    var r=await pb.send('/api/fluxgk/versoes/implantar',{method:'POST',body:{acao:acao,versao:acao==='nova'?'':versao}});
+    _verAlvo=r.versao||versao;
+    document.getElementById('s-ver-corpo').innerHTML='<div class="vbox vnew"><div class="vtit">'+_escV(_txv('wait',{v:_verAlvo}))+'</div></div>';
+    _esperarVersao(0);
+  }catch(e){showToast((e&&e.response&&e.response.message)||e.message||String(e),6000);carregarVersoes(true);}
+}
+function _esperarVersao(n){
+  if(n>90)return carregarVersoes(true);           /* ~15 min: desiste e mostra o histórico */
+  setTimeout(function(){
+    fetch('/versao.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
+      if(v&&v.versao===_verAlvo){location.reload();return;}
+      _esperarVersao(n+1);
+    }).catch(function(){_esperarVersao(n+1);});
+  },10000);
+}
 </script>
 <script>
 /* Versão no ar (1.<ano>.<seq>) e o ambiente, lidos de /versao.json, que o nginx escreve na partida.

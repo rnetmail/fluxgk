@@ -38,6 +38,7 @@
     'hub.stayIn':'Stay signed in',
     'hub.phPassword':'password',
     'hub.footer':'FluxGK · Data-Driven GK',
+    'hub.ver.title':'Versions','hub.ver.live':'Live','hub.ver.newAvail':'New version {v} available','hub.ver.reapply':'Version {v} available','hub.ver.update':'Update to {v}','hub.ver.ciPending':'Waiting for green CI ({s})','hub.ver.changes':'What changes','hub.ver.history':'Change history','hub.ver.published':'Published versions','hub.ver.rollback':'Go back to this','hub.ver.use':'Use this version','hub.ver.current':'live','hub.ver.running':'Change in progress: {t}','hub.ver.confirmNew':'Update production to {v}? The app will be unavailable for about 1 minute.','hub.ver.confirmBack':'Switch production to {v}? Only the code changes: data stays as it is. The app will be unavailable for about 1 minute.','hub.ver.wait':'Updating to {v}… the app reloads by itself.','hub.ver.err':'Could not load versions','hub.ver.none':'Nothing new in HML.','hub.ver.empty':'No changes yet.','hub.ver.ok':'succeeded','hub.ver.fail':'failed','hub.ver.prdOnly':'Changes are made in production only.',
 
     /* --- hub: home --- */
     'hub.switch':'SWITCH',
@@ -1106,6 +1107,7 @@
     'hub.stayIn':'Manter conectado',
     'hub.phPassword':'senha',
     'hub.footer':'FluxGK · Data-Driven GK',
+    'hub.ver.title':'Versões','hub.ver.live':'No ar','hub.ver.newAvail':'Nova versão {v} disponível','hub.ver.reapply':'Versão {v} disponível','hub.ver.update':'Atualizar para {v}','hub.ver.ciPending':'Aguardando CI verde ({s})','hub.ver.changes':'O que muda','hub.ver.history':'Histórico de trocas','hub.ver.published':'Versões publicadas','hub.ver.rollback':'Voltar para esta','hub.ver.use':'Usar esta versão','hub.ver.current':'no ar','hub.ver.running':'Troca em andamento: {t}','hub.ver.confirmNew':'Atualizar a produção para {v}? O app ficará indisponível por cerca de 1 minuto.','hub.ver.confirmBack':'Trocar a produção para {v}? Só o código muda: os dados ficam como estão. O app ficará indisponível por cerca de 1 minuto.','hub.ver.wait':'Atualizando para {v}… o app recarrega sozinho.','hub.ver.err':'Não consegui carregar as versões','hub.ver.none':'Nada novo em HML.','hub.ver.empty':'Sem trocas ainda.','hub.ver.ok':'concluída','hub.ver.fail':'falhou','hub.ver.prdOnly':'As trocas são feitas só na produção.',
 
     /* --- hub: home --- */
     'hub.switch':'TROCAR',
