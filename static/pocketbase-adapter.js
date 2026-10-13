@@ -12,8 +12,9 @@
  *   { owner (relation users), path (text), data (json) }  — índice único (owner, path)
  *
  * Cada ESCRITA grava UM nó no caminho escrito e apaga os nós descendentes
- * (o valor escrito passa a ser a verdade dali para baixo). Cada LEITURA de um
- * caminho P resolve em três camadas:
+ * (o valor escrito passa a ser a verdade dali para baixo). Leitura e escrita
+ * trabalham sobre uma CÓPIA LOCAL dos nós do usuário (ver "cópia local"),
+ * como o Firebase fazia. Cada LEITURA de um caminho P resolve em três camadas:
  *   1) nó ANCESTRAL (gravaram users/x e eu leio users/x/a/b) → desce no JSON
  *   2) nó EXATO em P
  *   3) nós DESCENDENTES de P → sobrepostos na árvore montada
@@ -141,77 +142,162 @@
     };
   }
 
-  /* ------------------------------ acesso aos nós ---------------------------- */
-  function filterFor(path) {
-    var p = clean(path), owner = 'owner="' + esc(uid()) + '"';
-    if (p === '') return owner;
-    var ps = parts(p), ors = [], acc = [];
-    for (var i = 0; i < ps.length - 1; i++) {          /* ancestrais */
-      acc.push(ps[i]);
-      ors.push('path="' + esc(acc.join('/')) + '"');
-    }
-    ors.push('path="' + esc(p) + '"');                  /* exato */
-    ors.push('path~"' + esc(p) + '/"');                 /* descendentes (~ é LIKE) */
-    return owner + ' && (' + ors.join(' || ') + ')';
-  }
+  /* --------------------------- cópia local (cache) ---------------------------
+   * O Firebase guardava uma cópia local dos dados e lia dela. A versão 1.0
+   * deste adaptador ia à rede em tudo: cada item salvo custava 4 viagens (lê
+   * antes de gravar, grava, relê a lista pela própria gravação e relê de novo
+   * pelo eco do tempo real). Salvar 150 sessões = 602 requisições, 30 s.
+   *
+   * Agora: ao entrar, UMA leitura baixa todos os nós do usuário para `cache`
+   * (caminho → R). Leitura sai do cache, sem rede. Escrita muda o cache na hora,
+   * avisa os listeners e manda UMA requisição por nó tocado. O eco do tempo
+   * real da própria gravação é reconhecido e descartado; mudança vinda de outro
+   * aparelho entra no cache e avisa os listeners.
+   *
+   * R = { path, id, v, updated, gone, inflight, chain, queued }
+   *   id       → id do registro no PocketBase (null enquanto o create não volta)
+   *   gone     → apagado aqui; fica como lápide enquanto houver viagem em voo,
+   *              para o eco de uma gravação anterior não ressuscitar o nó
+   *   chain    → fila das viagens deste nó (create → update → delete em ordem)
+   *   queued   → viagem enfileirada que ainda não saiu: gravações seguidas no
+   *              mesmo nó pegam carona nela e saem numa requisição só
+   * ------------------------------------------------------------------------ */
+  var cache = null;            /* Map caminho → R, do usuário cacheUid */
+  var cacheUid = null;
+  var _loading = null;
+  var pendingEvents = null;    /* eventos que chegaram durante a carga */
+  var deletedIds = {};         /* ids apagados por nós: eco atrasado não volta */
+  var stats = { requests: 0 };
 
-  function fetchRelated(path) {
-    return ready().then(function () {
-      if (!uid()) return [];
-      /* requestKey:null desliga o AUTOCANCELAMENTO do SDK. Sem isto, duas
-         leituras concorrentes com a mesma assinatura se cancelam entre si — e
-         as páginas ligam vários on('value') de uma vez, o que deixaria a tela
-         vazia com um erro só no console. Capturado pelo teste de fumaça. */
-      return pb.collection(NODES).getFullList({ batch: 500, filter: filterFor(path), requestKey: null });
-    }).then(function (recs) {
-      var p = clean(path);
-      return recs.filter(function (r) {
-        var rp = clean(r.path);
-        return rp === p || isDesc(rp, p) || isDesc(p, rp);
-      });
-    });
+  function newRec(p) {
+    return { path: p, id: null, v: undefined, updated: '', gone: false, inflight: 0, chain: Promise.resolve(), queued: null };
   }
 
   function unwrap(rec) { return rec && rec.data ? rec.data.v : undefined; }
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
-  function resolve(path, recs) {
+  function loadCache() {
+    return ready().then(function () {
+      var u = uid();
+      if (!u) { cache = null; cacheUid = null; _loading = null; return null; }
+      if (cacheUid === u && _loading) return _loading;
+      cacheUid = u; cache = null; pendingEvents = []; deletedIds = {};
+      var my = _loading = ensureSubscription().then(function () {
+        stats.requests++;
+        return pb.collection(NODES).getFullList({ batch: 500, filter: 'owner="' + esc(u) + '"', requestKey: null });
+      }).then(function (recs) {
+        if (_loading !== my) return null;                  /* trocou de usuário no meio */
+        var m = new Map();
+        recs.forEach(function (r) {
+          var R = newRec(clean(r.path));
+          R.id = r.id; R.v = unwrap(r); R.updated = r.updated || '';
+          m.set(R.path, R);
+        });
+        cache = m;
+        var q = pendingEvents || []; pendingEvents = null;
+        q.forEach(applyEvent);
+        listeners.slice().forEach(function (L) { emit(L, false); });
+        return null;
+      });
+      my.catch(function () { if (_loading === my) { _loading = null; cacheUid = null; } });
+      return my;
+    });
+  }
+
+  function dropCache() {
+    cache = null; cacheUid = null; _loading = null; pendingEvents = null; deletedIds = {};
+  }
+
+  /* Viagem que deixa o servidor igual ao cache neste nó. Lê o estado NA HORA
+     de sair, por isso quem chega enquanto ela espera na fila pega carona. */
+  function sync(R) {
+    if (R.queued) return R.queued;
+    R.inflight++;
+    var run = R.chain.then(function () {
+      R.queued = null;
+      var col = pb.collection(NODES);
+      if (R.gone) {
+        if (!R.id) return null;
+        var id = R.id;
+        stats.requests++;
+        return col.delete(id, { requestKey: null }).then(function () {
+          deletedIds[id] = 1; R.id = null; R.updated = '';
+        }, function (e) {
+          if (e && e.status === 404) { deletedIds[id] = 1; R.id = null; return; }
+          throw e;
+        });
+      }
+      var body = { data: { v: R.v } };
+      stats.requests++;
+      var req = R.id
+        ? col.update(R.id, body, { requestKey: null })
+        : col.create({ owner: cacheUid, path: R.path, data: body.data }, { requestKey: null }).catch(function (e) {
+            /* o nó já existe no servidor sem o cache saber (gravado por outro
+               aparelho com o tempo real fora): acha e atualiza */
+            if (!e || e.status !== 400) throw e;
+            stats.requests += 2;
+            return col.getFirstListItem('owner="' + esc(cacheUid) + '" && path="' + esc(R.path) + '"', { requestKey: null })
+              .then(function (rec) { return col.update(rec.id, body, { requestKey: null }); });
+          });
+      return req.then(function (rec) {
+        R.id = rec.id;
+        if (!R.updated || (rec.updated || '') > R.updated) R.updated = rec.updated || '';
+      });
+    });
+    R.queued = run;
+    R.chain = run.catch(function () {});
+    function done() {
+      R.inflight--;
+      if (R.gone && !R.inflight && cache && cache.get(R.path) === R) cache.delete(R.path);
+    }
+    return run.then(function () { done(); return null; }, function (e) {
+      done();
+      console.warn('[fluxdb] gravação falhou em', R.path, e && e.message);
+      resync();
+      throw e;
+    });
+  }
+
+  /* Gravação falhou: o cache pode estar à frente do servidor. Rebaixa tudo. */
+  var _resyncT = null;
+  function resync() {
+    if (_resyncT) return;
+    _resyncT = setTimeout(function () {
+      _resyncT = null;
+      if (!cacheUid) return;
+      _loading = null; cacheUid = null;
+      loadCache().catch(function (e) { console.warn('[fluxdb] recarga falhou:', e && e.message); });
+    }, 300);
+  }
+
+  function resolve(path) {
     var p = clean(path), value;
+    if (!cache) return undefined;
+    var anc = null, exact = null, desc = [];
+    cache.forEach(function (R, rp) {
+      if (R.gone) return;
+      if (rp === p) exact = R;
+      else if (isDesc(p, rp)) { if (!anc || anc.path.length < rp.length) anc = R; }
+      else if (isDesc(rp, p)) desc.push(R);
+    });
 
     /* 1) ancestral mais profundo que contenha o caminho */
-    var anc = null;
-    recs.forEach(function (r) {
-      var rp = clean(r.path);
-      if (isDesc(p, rp) && (!anc || clean(anc.path).length < rp.length)) anc = r;
-    });
-    if (anc) {
-      var rest = parts(p).slice(parts(anc.path).length);
-      value = clone(deepGet(unwrap(anc), rest));
-    }
-
+    if (anc) value = clone(deepGet(anc.v, parts(p).slice(parts(anc.path).length)));
     /* 2) nó exato */
-    recs.forEach(function (r) {
-      if (clean(r.path) === p) value = clone(unwrap(r));
-    });
-
+    if (exact) value = clone(exact.v);
     /* 3) descendentes sobrepostos */
-    var desc = recs.filter(function (r) { return isDesc(clean(r.path), p); })
-                   .sort(function (a, b) { return clean(a.path).length - clean(b.path).length; });
     if (desc.length) {
       if (value === undefined || value === null || typeof value !== 'object') value = {};
-      desc.forEach(function (r) {
-        var rest = parts(clean(r.path)).slice(parts(p).length);
-        var v = clone(unwrap(r));
-        if (v === undefined) return;
-        deepSet(value, rest, v);
+      desc.sort(function (a, b) { return a.path.length - b.path.length; }).forEach(function (R) {
+        if (R.v === undefined) return;
+        deepSet(value, parts(R.path).slice(parts(p).length), clone(R.v));
       });
     }
     return value;
   }
 
   function readPath(path) {
-    return fetchRelated(path).then(function (recs) {
-      return Snapshot(path, resolve(path, recs));
-    });
+    return loadCache().then(function () { return Snapshot(path, resolve(path)); });
   }
 
   /* --------------------------------- escrita -------------------------------- */
@@ -219,48 +305,47 @@
     var p = clean(path);
     if (!p) return Promise.reject(new Error('fluxdb: set na raiz não é permitido'));
 
-    return fetchRelated(p).then(function (recs) {
+    return loadCache().then(function () {
+      if (!cache) throw new Error('fluxdb: escrita sem usuário logado');
+      var v = (value === undefined || value === null) ? null : clone(value);
       var exact = null, anc = null, desc = [];
-      recs.forEach(function (r) {
-        var rp = clean(r.path);
-        if (rp === p) exact = r;
-        else if (isDesc(p, rp) && (!anc || clean(anc.path).length < rp.length)) anc = r;
-        else if (isDesc(rp, p)) desc.push(r);
+      cache.forEach(function (R, rp) {
+        if (R.gone) return;
+        if (rp === p) exact = R;
+        else if (isDesc(p, rp)) { if (!anc || anc.path.length < rp.length) anc = R; }
+        else if (isDesc(rp, p)) desc.push(R);
       });
 
-      var jobs = desc.map(function (r) { return pb.collection(NODES).delete(r.id, { requestKey: null }); });
+      /* o valor escrito passa a ser a verdade dali para baixo */
+      var jobs = desc.map(function (R) { R.gone = true; R.v = undefined; return sync(R); });
 
-      /* o valor vive dentro de um ancestral: edita o JSON do ancestral */
       if (anc && !exact) {
-        var base = clone(unwrap(anc));
-        if (base === null || typeof base !== 'object') base = {};
-        deepSet(base, parts(p).slice(parts(anc.path).length), value === undefined ? null : value);
-        jobs.push(pb.collection(NODES).update(anc.id, { data: { v: base } }, { requestKey: null }));
-        return Promise.all(jobs);
+        /* o valor vive dentro de um ancestral: edita o JSON do ancestral */
+        var base = (anc.v !== null && typeof anc.v === 'object') ? anc.v : {};
+        deepSet(base, parts(p).slice(parts(anc.path).length), v);
+        anc.v = base;
+        jobs.push(sync(anc));
+      } else if (v === null) {
+        if (exact) { exact.gone = true; exact.v = undefined; jobs.push(sync(exact)); }
+      } else {
+        var R = exact || cache.get(p);                    /* pode ser uma lápide */
+        if (!R) { R = newRec(p); cache.set(p, R); }
+        R.gone = false; R.v = v;
+        jobs.push(sync(R));
       }
-
-      if (value === null || value === undefined) {
-        if (exact) jobs.push(pb.collection(NODES).delete(exact.id, { requestKey: null }));
-        return Promise.all(jobs);
-      }
-
-      if (exact) jobs.push(pb.collection(NODES).update(exact.id, { data: { v: value } }, { requestKey: null }));
-      else jobs.push(pb.collection(NODES).create({ owner: uid(), path: p, data: { v: value } }, { requestKey: null }));
+      notify(p);
       return Promise.all(jobs);
-    }).then(function () { notify(p); return null; });
+    }).then(function () { return null; });
   }
 
   function updatePath(path, obj) {
     var p = clean(path);
     if (!obj || typeof obj !== 'object') return Promise.reject(new Error('fluxdb: update exige um objeto'));
-    var ks = Object.keys(obj);
-    /* Firebase: update com chaves que são caminhos faz fan-out multi-local */
-    return ks.reduce(function (chain, k) {
-      return chain.then(function () {
-        var target = p ? p + '/' + clean(k) : clean(k);
-        return writePath(target, obj[k]);
-      });
-    }, Promise.resolve()).then(function () { return null; });
+    /* Firebase: update com chaves que são caminhos faz fan-out multi-local.
+       Todas no mesmo tique: as que caem no mesmo nó saem numa viagem só. */
+    return Promise.all(Object.keys(obj).map(function (k) {
+      return writePath(p ? p + '/' + clean(k) : clean(k), obj[k]);
+    })).then(function () { return null; });
   }
 
   function removePath(path) { return writePath(path, null); }
@@ -272,40 +357,87 @@
   }
 
   /* -------------------------- escuta em tempo real -------------------------- */
-  var listeners = [];          /* {path, event, cb} */
+  var listeners = [];          /* {path, event, cb, err, last} */
   var subscribed = false;
 
   function ensureSubscription() {
     if (subscribed || !uid()) return Promise.resolve();
     subscribed = true;
     return ready().then(function () {
-      return pb.collection(NODES).subscribe('*', function (e) {
-        if (!e || !e.record) return;
-        notify(clean(e.record.path));
-      });
+      return pb.collection(NODES).subscribe('*', onRealtime);
     }).catch(function (err) {
       subscribed = false;
       console.warn('[fluxdb] tempo real indisponível:', err && err.message);
     });
   }
 
-  function emit(L) {
-    readPath(L.path).then(function (snap) {
-      /* emit é assíncrono: entre o aviso e a volta da leitura a página pode ter
-         chamado off('value', h). O Firebase NUNCA chama o callback depois do
-         off, então quem saiu da lista não é mais avisado. Capturado pelo teste
-         de fumaça (um aviso em voo passava pelo off e chegava atrasado). */
-      if (listeners.indexOf(L) < 0) return;
-      try { L.cb(snap); } catch (e) { console.error('[fluxdb] listener falhou:', e); }
-    }).catch(function (e) { console.warn('[fluxdb] leitura falhou em', L.path, e && e.message); });
+  function onRealtime(e) {
+    if (!e || !e.record) return;
+    if (pendingEvents) { pendingEvents.push(e); return; }
+    applyEvent(e);
   }
 
+  function applyEvent(e) {
+    if (!cache) return;
+    var r = e.record, p = clean(r.path);
+    if (r.owner && r.owner !== cacheUid) return;
+    var R = cache.get(p);
+
+    if (e.action === 'delete') {
+      if (!R || R.inflight || (R.id && R.id !== r.id)) return;    /* já apagado, ou gravação nossa em voo */
+      cache.delete(p);
+      notify(p);
+      return;
+    }
+
+    if (deletedIds[r.id]) return;                                  /* eco atrasado de algo que apagamos */
+    if (R) {
+      if (R.inflight) return;                                      /* a resposta da nossa viagem é a verdade */
+      if (R.updated && (r.updated || '') <= R.updated) return;     /* eco da própria gravação, ou evento velho */
+      R.id = r.id; R.updated = r.updated || '';
+      var nv = unwrap(r);
+      if (!R.gone && same(R.v, nv)) return;
+      R.gone = false; R.v = nv;
+      notify(p);
+      return;
+    }
+    R = newRec(p);                                                 /* nó novo, de outro aparelho */
+    R.id = r.id; R.v = unwrap(r); R.updated = r.updated || '';
+    cache.set(p, R);
+    notify(p);
+  }
+
+  /* Avisos agrupados: 150 gravações no mesmo tique acordam cada listener uma
+     vez, e só se o valor que ele enxerga mudou de fato. */
+  var dirty = [];
+  var _flushT = null;
+
   function notify(changedPath) {
-    var cp = clean(changedPath);
+    dirty.push(clean(changedPath));
+    if (!_flushT) _flushT = setTimeout(flush, 0);
+  }
+
+  function flush() {
+    _flushT = null;
+    var ps = dirty; dirty = [];
     listeners.slice().forEach(function (L) {
       if (L.path === '.info/connected') return;
-      if (cp === L.path || isDesc(cp, L.path) || isDesc(L.path, cp)) emit(L);
+      for (var i = 0; i < ps.length; i++) {
+        var cp = ps[i];
+        if (cp === L.path || isDesc(cp, L.path) || isDesc(L.path, cp)) { emit(L, false); return; }
+      }
     });
+  }
+
+  function emit(L, force) {
+    /* o Firebase NUNCA chama o callback depois do off: quem saiu da lista não
+       é mais avisado. Capturado pelo teste de fumaça. */
+    if (listeners.indexOf(L) < 0) return;
+    var val = resolve(L.path);
+    var key = JSON.stringify(val === undefined ? null : val);
+    if (!force && key === L.last) return;
+    L.last = key;
+    try { L.cb(Snapshot(L.path, val)); } catch (e) { console.error('[fluxdb] listener falhou:', e); }
   }
 
   /* --------------------------- conexão (.info) ------------------------------ */
@@ -367,7 +499,7 @@
 
       /* Firebase devolve o PRÓPRIO callback, e é isso que as páginas guardam
          para chamar off('value', h) depois (mod_profile faz exatamente isso). */
-      on: function (event, cb) {
+      on: function (event, cb, errCb) {
         if (event !== 'value') {
           console.warn('[fluxdb] on("' + event + '") não suportado; use value');
           return cb;
@@ -378,9 +510,14 @@
           if (connState !== null) { try { cb(Snapshot(p, connState)); } catch (e) {} }
           return cb;
         }
-        var L = { path: p, event: event, cb: cb };
+        var L = { path: p, event: event, cb: cb, last: undefined };
         listeners.push(L);
-        ensureSubscription().then(function () { emit(L); });
+        /* a carga, ao terminar, já avisa quem estava esperando: não repete */
+        loadCache().then(function () { if (L.last === undefined) emit(L, true); }, function (e) {
+          listeners = listeners.filter(function (x) { return x !== L; });
+          if (typeof errCb === 'function') { try { errCb(e); } catch (x) {} }
+          else console.warn('[fluxdb] leitura falhou em', p, e && e.message);
+        });
         return cb;
       },
 
@@ -446,11 +583,13 @@
 
     signInWithEmailAndPassword: function (email, password) {
       return ready().then(function () {
+        try { pb.collection(NODES).unsubscribe(); } catch (e) {}
+        subscribed = false;
+        dropCache();
         return pb.collection('users').authWithPassword(String(email).trim(), String(password), { requestKey: null });
       }).then(function () {
-        subscribed = false;
-        return ensureSubscription();
-      }).then(function () {
+        /* a carga não segura o login: quem ler espera por ela */
+        loadCache().catch(function (e) { console.warn('[fluxdb] carga inicial falhou:', e && e.message); });
         fireAuth();
         return { user: pubUser() };
       }).catch(function (e) { throw mapAuthError(e); });
@@ -471,6 +610,7 @@
         try { pb.collection(NODES).unsubscribe(); } catch (e) {}
         subscribed = false;
         listeners = [];
+        dropCache();
         pb.authStore.clear();
         fireAuth();
         return null;
@@ -480,7 +620,7 @@
     onAuthStateChanged: function (cb) {
       authCbs.push(cb);
       ready().then(function () {
-        if (uid()) ensureSubscription();
+        if (uid()) loadCache().catch(function () {});
         try { cb(pubUser()); } catch (e) { console.error('[fluxdb] onAuthStateChanged:', e); }
       });
       return function () { authCbs = authCbs.filter(function (c) { return c !== cb; }); };
@@ -548,8 +688,13 @@
     database: function () { return dbApi; },
     modular: modular,
     /* utilidades próprias, úteis ao teste de fumaça */
-    _internal: { ready: ready, uid: uid, readPath: readPath, writePath: writePath, pb: function () { return pb; } },
-    SDK: 'fluxdb/1.0 (PocketBase)'
+    _internal: {
+      ready: ready, uid: uid, readPath: readPath, writePath: writePath, pb: function () { return pb; },
+      stats: stats, pending: function () {
+        var n = 0; if (cache) cache.forEach(function (R) { n += R.inflight; }); return n;
+      }
+    },
+    SDK: 'fluxdb/1.1 (PocketBase, cópia local)'
   };
 
   fluxdb.database.ServerValue = dbApi.ServerValue;

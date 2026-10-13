@@ -204,6 +204,9 @@ async function main() {
   await esperar(() => recebidos.length > 0, 8000);
   checar('on("value") dispara o valor atual ao ligar',
     recebidos.length > 0 && recebidos[0] && recebidos[0].s1, JSON.stringify(recebidos[0]));
+  await dormir(800);
+  checar('on("value") dispara o valor inicial UMA vez, como o Firebase', recebidos.length === 1,
+    'avisos=' + recebidos.length);
 
   const pb = fluxdb._internal.pb();
   const rec = await pb.collection('nodes').getFirstListItem(`owner="${uidA}" && path="${sessoes}"`);
@@ -246,6 +249,65 @@ async function main() {
   snap = await db.ref(sessoes).once('value');
   checar('remove apaga só o ramo pedido',
     snap.val() && snap.val().s1 && !snap.val().s2, JSON.stringify(snap.val()));
+
+  /* 11b · CUSTO: conta as requisições HTTP de verdade (fora o canal do tempo
+     real). Era aqui que a versão 1.0 morria: 4 viagens por item salvo. */
+  let viagens = 0;
+  pb.beforeSend = (url, options) => {
+    if (!/\/api\/realtime/.test(url)) viagens++;
+    return { url, options };
+  };
+  const esperarFila = () => esperar(() => fluxdb._internal.pending() === 0, 20000);
+
+  viagens = 0;
+  await db.ref(sessoes).once('value');
+  await db.ref(sessoes + '/s1/min').once('value');
+  await db.ref(base).get();
+  checar('leituras saem da cópia local, sem rede', viagens === 0, 'requisições=' + viagens);
+
+  const lote = base + '/lote';
+  const avisosLote = [];
+  const alcaLote = db.ref(lote).on('value', (s) => avisosLote.push(Object.keys(s.val() || {}).length));
+  await esperar(() => avisosLote.length > 0, 8000);
+  const avisosAntes = avisosLote.length;
+  viagens = 0;
+  const t0 = Date.now();
+  const itens = Array.from({ length: 150 }, (_, i) => ({ id: 1000 + i, titulo: 'Sessão ' + i, min: 45 }));
+  await Promise.all(itens.map((s) => db.ref(lote + '/' + s.id).set(s)));
+  const msLote = Date.now() - t0;
+  checar('150 sessões novas = 150 requisições (era ~600)', viagens === 150, 'requisições=' + viagens + ' em ' + msLote + ' ms');
+  await dormir(2500);
+  const avisosDoLote = avisosLote.length - avisosAntes;
+  checar('listener acorda 1× pelo lote inteiro e ignora o eco do tempo real',
+    avisosDoLote === 1 && avisosLote[avisosLote.length - 1] === 150,
+    'avisos=' + avisosDoLote + ' itens no último=' + avisosLote[avisosLote.length - 1]);
+  db.ref(lote).off('value', alcaLote);
+
+  viagens = 0;
+  const editar = {};
+  for (let i = 0; i < 30; i++) editar['s1/nota' + i] = i;
+  await db.ref(sessoes).update(editar);
+  checar('30 mudanças no mesmo nó no mesmo tique pegam carona (≤ 2 viagens)',
+    viagens <= 2, 'requisições=' + viagens);
+  snap = await db.ref(sessoes + '/s1').once('value');
+  checar('o nó guarda as 30 mudanças', snap.val().nota0 === 0 && snap.val().nota29 === 29, JSON.stringify(snap.val()));
+
+  const noServidor = await pb.collection('nodes').getFullList({ filter: `owner="${uidA}" && path~"${lote}/"` });
+  checar('o servidor tem as 150 sessões do lote', noServidor.length === 150, 'registros=' + noServidor.length);
+  const doServidor = await pb.collection('nodes').getFirstListItem(`owner="${uidA}" && path="${sessoes}"`);
+  checar('o servidor tem as 30 mudanças', doServidor.data.v.s1.nota29 === 29, JSON.stringify(doServidor.data.v.s1));
+
+  viagens = 0;
+  await db.ref(lote).remove();
+  await esperarFila();
+  checar('remover o lote = 1 requisição por nó apagado', viagens === 150, 'requisições=' + viagens);
+  snap = await db.ref(lote).once('value');
+  checar('lote removido some da leitura', !snap.exists(), JSON.stringify(snap.val()));
+  await dormir(2000);
+  snap = await db.ref(lote).once('value');
+  checar('eco atrasado do tempo real não ressuscita o que foi apagado', !snap.exists(),
+    'itens=' + Object.keys(snap.val() || {}).length);
+  pb.beforeSend = undefined;
 
   /* 12 · off */
   db.ref(sessoes).off('value', alca);
