@@ -82,7 +82,7 @@
 
 ### Correções de defeitos
 
-- [ ] T-15, Gravar as anotações do pós-treino por goleiro e por exercício (D-02): campos `postGkNotes: {<goleiro>: texto}` e `postExNotes: {<exerciseId>: texto}` na sessão, restaurados ao reabrir
+- [x] T-15, Gravar as anotações do pós-treino por goleiro e por exercício (D-02): campos `postGkNotes: {<goleiro>: texto}` e `postExNotes: {<exerciseId>: texto}` na sessão, restaurados ao reabrir — **feito em 13/10**, com formato ajustado: `postGkNotes = [{gk, nota}]` (nomes livres não viram chave) e `postNote` em cada exercício; também no relatório. Ponta a ponta em HML: sobrevive ao redesenho, grava, reabre e sai no relatório
   - Origem no legado: `mod_planner.html:1196-1214` (textareas sem id) e `:2101-2118` (campos gravados)
   - Critério de pronto: Critério de Aceitação 7
   - Confiança: 🟢 (defeito) / 🟡 (nomes dos campos propostos)

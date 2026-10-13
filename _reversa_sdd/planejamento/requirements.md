@@ -31,7 +31,7 @@ biblioteca pessoal de exercícios, que vale para todos os clubes e temporadas. �
 - RN-14 Resgate: mostra sessões que existem só no navegador e permite restaurá-las na temporada aberta; procura sessões em outros clubes/temporadas da conta (até 4 níveis) e permite copiá-las. 🟢
 - RN-15 Relatórios em ordem cronológica quando há mais de uma sessão. 🟢
 - RN-16 O idioma vem do hub e não é gravado pelo módulo. 🟢
-- 🔴 RN-17 **Hoje** as anotações por goleiro e por exercício do pós-treino aparecem na tela e **não são gravadas**. **Decisão do dono (D-02):** devem ser gravadas.
+- 🟢 RN-17 As anotações por goleiro e por exercício do pós-treino são gravadas na sessão (`postGkNotes = [{gk, nota}]`, `postNote` no exercício), voltam ao reabrir e entram no relatório. **Corrigido em 13/10 (D-02)** — antes apareciam na tela e não eram gravadas.
 
 ## Requisitos Funcionais
 

@@ -90,7 +90,7 @@ Entidades `Sessão` e `Exercício`: ver `../data-dictionary.md`. Caminhos: `<dat
 - `console.warn` para item apagado que voltou e para espaço local esgotado. 🟢
 
 ## Riscos e Lacunas
-- 🔴 Anotações por goleiro e por exercício do pós-treino não têm `id` nem campo na sessão (`refreshPost`, `:1196-1214`): perdidas. Decisão D-02: gravar.
+- 🟢 ~~Anotações por goleiro e por exercício do pós-treino não eram gravadas~~ — corrigido em 13/10 (D-02): `_postNotas`, `postGkNotes`, `postNote`.
 - 🟢 Cada sessão leva os exercícios com imagem; a biblioteca da temporada pesa MB e é relida inteira a cada mudança.
 - 🟢 `buscarOutrasTemporadas` lê `users/<uid>/data` inteiro (todos os módulos, inclusive vídeo).
 - 🟢 Restaurar e importar gravam uma sessão por vez em laço `await`.
