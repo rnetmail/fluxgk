@@ -1,0 +1,20 @@
+{
+  "allowLegacyEdits": true,
+  "allowedPaths": [
+    ".github/**",
+    "VERSION",
+    ".gitignore",
+    ".env.example",
+    "README.md",
+    "docker-compose.yml",
+    "Dockerfile.nginx",
+    "Dockerfile.pocketbase",
+    "docker/**",
+    "nginx/**",
+    "tools/**",
+    "index.html",
+    "fluxgk-i18n.js",
+    "pb_hooks/**",
+    "pb_migrations/**"
+  ]
+}

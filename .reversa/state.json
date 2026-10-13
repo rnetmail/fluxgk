@@ -1,0 +1,215 @@
+{
+  "version": "1.3.4",
+  "project": "FluxGK",
+  "user_name": "Robson",
+  "chat_language": "pt-br",
+  "doc_language": "Português",
+  "answer_mode": "chat",
+  "doc_level": "completo",
+  "output_folder": "_reversa_sdd",
+  "phase": "concluido",
+  "completed": [
+    "reconhecimento",
+    "escavacao",
+    "interpretacao",
+    "geracao",
+    "revisao"
+  ],
+  "pending": [],
+  "engines": [
+    "claude-code"
+  ],
+  "agents": [
+    "reversa",
+    "reversa-scout",
+    "reversa-archaeologist",
+    "reversa-detective",
+    "reversa-architect",
+    "reversa-writer",
+    "reversa-reviewer"
+  ],
+  "checkpoints": {
+    "scout": {
+      "completed_at": "2026-10-13T01:26:56Z",
+      "files": [
+        "_reversa_sdd/inventory.md",
+        "_reversa_sdd/dependencies.md",
+        ".reversa/context/surface.json"
+      ]
+    },
+    "archaeologist": {
+      "modules_analyzed": [
+        "hub",
+        "fluxdb",
+        "planner",
+        "periodization",
+        "xg",
+        "stats",
+        "minutes",
+        "data",
+        "profile",
+        "scouting",
+        "video",
+        "tatica3d",
+        "i18n",
+        "infra"
+      ],
+      "modules_pending": [],
+      "completed_at": "2026-10-13T01:37:47Z",
+      "files": [
+        "_reversa_sdd/code-analysis.md",
+        "_reversa_sdd/data-dictionary.md",
+        "_reversa_sdd/flowcharts/",
+        ".reversa/context/modules.json"
+      ]
+    },
+    "detective": {
+      "completed_at": "2026-10-13T01:41:02Z",
+      "files": [
+        "_reversa_sdd/domain.md",
+        "_reversa_sdd/state-machines.md",
+        "_reversa_sdd/permissions.md",
+        "_reversa_sdd/adrs/"
+      ],
+      "rules": 43,
+      "adrs": 8,
+      "state_machines": 5,
+      "gaps": 7
+    },
+    "architect": {
+      "completed_at": "2026-10-13T01:43:15Z",
+      "files": [
+        "_reversa_sdd/architecture.md",
+        "_reversa_sdd/c4-context.md",
+        "_reversa_sdd/c4-containers.md",
+        "_reversa_sdd/c4-components.md",
+        "_reversa_sdd/erd-complete.md",
+        "_reversa_sdd/traceability/spec-impact-matrix.md"
+      ],
+      "tech_debts": 13
+    },
+    "writer": {
+      "completed_at": "2026-10-13T12:17:21Z",
+      "units": 14,
+      "files": 53,
+      "unit_files": 46,
+      "globals": [
+        "openapi/pocketbase-fluxgk.yaml",
+        "user-stories/ (5)",
+        "traceability/code-spec-matrix.md"
+      ],
+      "coverage": "29 de 30 arquivos do legado mapeados (sem spec: diagnostico.html)",
+      "pendencia_antes_do_reviewer": "atualizar adaptador-fluxdb/ da 1.0 para a 1.1 (commit e1dc8c7)"
+    },
+    "reviewer": {
+      "completed_at": "2026-10-13T15:25:20Z",
+      "specs_revisadas": 14,
+      "revisao_cruzada": false,
+      "confianca": {
+        "antes": "93.1%",
+        "depois": "95.9%",
+        "verde": 1273,
+        "amarelo": 58,
+        "vermelho": 27
+      },
+      "perguntas": 21,
+      "respondidas": 21,
+      "decisoes": "D-11..D-31",
+      "lacunas_abertas": 4,
+      "files": [
+        "_reversa_sdd/confidence-report.md",
+        "_reversa_sdd/questions.md",
+        "_reversa_sdd/gaps.md"
+      ]
+    }
+  },
+  "created_files": [
+    ".reversa/version",
+    ".reversa/state.json",
+    ".reversa/plan.md",
+    "_reversa_sdd/inventory.md",
+    "_reversa_sdd/dependencies.md",
+    ".reversa/context/surface.json",
+    "_reversa_sdd/code-analysis.md",
+    "_reversa_sdd/data-dictionary.md",
+    "_reversa_sdd/flowcharts/",
+    ".reversa/context/modules.json",
+    "_reversa_sdd/domain.md",
+    "_reversa_sdd/state-machines.md",
+    "_reversa_sdd/permissions.md",
+    "_reversa_sdd/adrs/",
+    "_reversa_sdd/architecture.md",
+    "_reversa_sdd/c4-context.md",
+    "_reversa_sdd/c4-containers.md",
+    "_reversa_sdd/c4-components.md",
+    "_reversa_sdd/erd-complete.md",
+    "_reversa_sdd/traceability/spec-impact-matrix.md",
+    "_reversa_sdd/<units>/ (14 pastas)",
+    "_reversa_sdd/openapi/",
+    "_reversa_sdd/user-stories/",
+    "_reversa_sdd/traceability/code-spec-matrix.md",
+    "_reversa_sdd/confidence-report.md",
+    "_reversa_sdd/questions.md",
+    "_reversa_sdd/gaps.md"
+  ],
+  "redator_progress": {
+    "mode": "arquivo",
+    "total": 53,
+    "done": [
+      "hub/requirements.md",
+      "hub/design.md",
+      "hub/tasks.md",
+      "hub/contracts.md",
+      "adaptador-fluxdb/requirements.md",
+      "adaptador-fluxdb/design.md",
+      "adaptador-fluxdb/tasks.md",
+      "adaptador-fluxdb/contracts.md",
+      "planejamento/requirements.md",
+      "planejamento/design.md",
+      "planejamento/tasks.md",
+      "periodizacao/requirements.md",
+      "periodizacao/design.md",
+      "periodizacao/tasks.md",
+      "xg/requirements.md",
+      "xg/design.md",
+      "xg/tasks.md",
+      "estatistica/requirements.md",
+      "estatistica/design.md",
+      "estatistica/tasks.md",
+      "minutagem/requirements.md",
+      "minutagem/design.md",
+      "minutagem/tasks.md",
+      "controle-de-carga/requirements.md",
+      "controle-de-carga/design.md",
+      "controle-de-carga/tasks.md",
+      "controle-de-carga/questions.md",
+      "perfil/requirements.md",
+      "perfil/design.md",
+      "perfil/tasks.md",
+      "video/requirements.md",
+      "video/design.md",
+      "video/tasks.md",
+      "tatica-3d/requirements.md",
+      "tatica-3d/design.md",
+      "tatica-3d/tasks.md",
+      "traducao/requirements.md",
+      "traducao/design.md",
+      "traducao/tasks.md",
+      "infraestrutura/requirements.md",
+      "infraestrutura/design.md",
+      "infraestrutura/tasks.md",
+      "infraestrutura/contracts.md",
+      "scouting/requirements.md",
+      "scouting/design.md",
+      "scouting/tasks.md",
+      "openapi/pocketbase-fluxgk.yaml",
+      "user-stories/entrar-e-escolher-contexto.md",
+      "user-stories/registrar-treino-e-carga.md",
+      "user-stories/registrar-jogo.md",
+      "user-stories/analisar-video.md",
+      "user-stories/avaliar-goleiro.md",
+      "traceability/code-spec-matrix.md"
+    ],
+    "next": null
+  }
+}

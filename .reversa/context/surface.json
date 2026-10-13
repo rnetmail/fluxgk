@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-10-13T01:26:48Z",
+  "project_root": "/home/rstecbr/web/fluxgk.rstecbr.com.br/private/fluxgk",
+  "languages": [
+    {"name": "HTML (JS/CSS inline)", "extensions": [".html"], "file_count": 12},
+    {"name": "JavaScript", "extensions": [".js", ".mjs"], "file_count": 8},
+    {"name": "Shell", "extensions": [".sh"], "file_count": 1},
+    {"name": "Python", "extensions": [".py"], "file_count": 1}
+  ],
+  "primary_language": "JavaScript (inline em HTML)",
+  "frameworks": [
+    {"name": "PocketBase", "version": "0.40.5", "source": "Dockerfile.pocketbase"},
+    {"name": "PocketBase JS SDK", "version": "desconhecida", "source": "static/vendor/pocketbase.umd.js"},
+    {"name": "nginx", "version": "1.27-alpine", "source": "Dockerfile.nginx"},
+    {"name": "three.js", "version": "desconhecida", "source": "static/vendor/three.min.js"},
+    {"name": "Chart.js", "version": "4.4.1", "source": "CDN"},
+    {"name": "pdf-lib", "version": "1.17.1", "source": "CDN"},
+    {"name": "mp4box", "version": "0.5.2", "source": "CDN"},
+    {"name": "jszip", "version": "3.10.1", "source": "CDN"}
+  ],
+  "package_manager": null,
+  "entry_points": [
+    {"path": "index.html", "type": "app_entry"},
+    {"path": "docker/pocketbase-entrypoint.sh", "type": "server_entry"},
+    {"path": "docker-compose.yml", "type": "infra"}
+  ],
+  "config_files": [".env.example", "nginx/conf.d/default.conf", "manifest.webmanifest", "manifest.json"],
+  "ci_cd": [],
+  "docker": {"dockerfile": ["Dockerfile.nginx", "Dockerfile.pocketbase"], "compose": "docker-compose.yml"},
+  "database_hints": [{"path": "pb_migrations/1760270000_init_fluxgk.js", "type": "migrations_dir"}],
+  "test_framework": null,
+  "test_file_count": 1,
+  "modules": ["hub", "fluxdb", "planner", "periodization", "xg", "stats", "minutes", "data", "profile", "scouting", "video", "tatica3d", "i18n", "infra"],
+  "total_files": 79,
+  "organization_suggestion": {
+    "granularity": "module",
+    "rationale": "Cada domínio é um arquivo HTML próprio (mod_*.html) registrado em MOD_FILES do hub; não há roteamento nem pastas por domínio.",
+    "signals": [
+      {"type": "top_level_domain_files", "evidence": ["index.html", "mod_planner.html", "mod_xg.html", "mod_stats.html", "mod_minutes.html", "mod_data.html", "mod_profile.html", "mod_scouting.html", "mod_video.html", "mod_periodization.html"]}
+    ],
+    "features": []
+  }
+}

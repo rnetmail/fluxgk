@@ -1,0 +1,470 @@
+openapi: 3.1.0
+info:
+  title: FluxGK — API do PocketBase usada pelo app
+  version: "1.1"
+  summary: Subconjunto da API REST do PocketBase 0.40.5 que o adaptador fluxdb 1.1 chama.
+  description: |
+    O FluxGK não tem API própria. As páginas falam com o `adaptador-fluxdb` (`static/pocketbase-adapter.js`),
+    que chama o SDK oficial do PocketBase (`/static/vendor/pocketbase.umd.js`), que chama estas rotas.
+    Tudo passa pelo nginx da stack em `/api/` (ver `../infraestrutura/contracts.md`).
+
+    Só estão aqui as rotas e os parâmetros que o adaptador usa, conferidos em
+    `static/pocketbase-adapter.js` (commit e1dc8c7) e na migration `pb_migrations/1760270000_init_fluxgk.js`.
+    O painel `/_/` e as rotas de superusuário não fazem parte do contrato do app.
+
+    Confiança: 🟢 para rotas, filtros e regras (lidos no código); 🟡 para formatos de resposta, que seguem a
+    documentação do PocketBase 0.40 e não foram capturados de produção, exceto `/api/health`.
+
+    Além do PocketBase padrão, há duas rotas próprias em `pb_hooks/` (tela de versões do admin, desde 13/10).
+    API pública própria e servidor MCP (D-05) não existem; ver `../infraestrutura/tasks.md` T-21.
+servers:
+  - url: https://fluxgk.rstecbr.com.br
+    description: produção
+  - url: https://hml.fluxgk.rstecbr.com.br
+    description: homologação (prevista, não existe em 13/10)
+tags:
+  - name: saude
+  - name: auth
+    description: coleção `users` (auth)
+  - name: nodes
+    description: coleção `nodes` — a árvore do antigo Realtime Database, um registro por caminho gravado
+  - name: realtime
+  - name: versoes
+    description: rotas próprias em pb_hooks (tela de versões do admin)
+security:
+  - tokenUsuario: []
+paths:
+  /api/health:
+    get:
+      tags: [saude]
+      operationId: saude
+      summary: Saúde do PocketBase
+      description: |
+        Usado pelo adaptador para `.info/connected` (ping a cada 20 s) e pela verificação de saúde do contêiner.
+      security: []
+      responses:
+        "200":
+          description: no ar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, examples: ["API is healthy."] }
+                  code: { type: integer, examples: [200] }
+                  data: { type: object }
+
+  /api/collections/users/auth-with-password:
+    post:
+      tags: [auth]
+      operationId: entrar
+      summary: Login por e-mail e senha
+      description: |
+        `fluxdb.auth().signInWithEmailAndPassword(email, senha)`. O adaptador faz `trim` no e-mail.
+        Mapeamento de erro no adaptador: 400 → `auth/invalid-credential`; 403 → `auth/too-many-requests`;
+        demais, inclusive 429, → `auth/internal-error`.
+        O limite de tentativas conta pelo IP real (`X-Real-IP`, ver infraestrutura).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity, password]
+              properties:
+                identity: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: autenticado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RespostaAuth" }
+        "400": { $ref: "#/components/responses/Erro" }
+        "403": { $ref: "#/components/responses/Erro" }
+        "429": { $ref: "#/components/responses/Erro" }
+
+  /api/collections/users/auth-refresh:
+    post:
+      tags: [auth]
+      operationId: renovarSessao
+      summary: Renova o token da sessão guardada
+      description: |
+        Chamado no `ready()` do adaptador quando há sessão no `localStorage` (`pocketbase_auth`).
+        Falhou por qualquer motivo, inclusive sem rede → a sessão é descartada e o técnico volta à tela de login.
+      responses:
+        "200":
+          description: renovado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RespostaAuth" }
+        "401": { $ref: "#/components/responses/Erro" }
+
+  /api/collections/users/records:
+    post:
+      tags: [auth]
+      operationId: criarConta
+      summary: Cria conta de técnico
+      description: |
+        `fluxdb.auth().createUserWithEmailAndPassword(email, senha, extra?)`; em seguida o adaptador faz login.
+        **Regra atual: aberta a qualquer um** (`createRule = ''`). D-09 pede que só o administrador crie contas
+        (ver `../infraestrutura/tasks.md` T-10).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, passwordConfirm]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                passwordConfirm: { type: string }
+              additionalProperties: true
+      responses:
+        "200":
+          description: criada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Usuario" }
+        "400": { $ref: "#/components/responses/Erro" }
+
+  /api/collections/nodes/records:
+    get:
+      tags: [nodes]
+      operationId: listarNos
+      summary: Lê todos os nós do técnico (carga da cópia local)
+      description: |
+        Usado uma vez por login para montar a cópia local (`getFullList`, páginas de 500) e, no conflito de
+        criação, para achar o nó já existente (`getFirstListItem`, `perPage=1`).
+        A regra `owner = @request.auth.id` filtra no servidor de qualquer forma; o filtro do adaptador repete a
+        condição.
+      parameters:
+        - name: filter
+          in: query
+          required: true
+          schema: { type: string }
+          examples:
+            todos: { value: 'owner="<uid>"' }
+            umCaminho: { value: 'owner="<uid>" && path="users/<uid>/scouting"' }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, enum: [1, 500] }
+        - name: skipTotal
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: página de nós
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  perPage: { type: integer }
+                  totalItems: { type: integer }
+                  totalPages: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/No" }
+        "400": { $ref: "#/components/responses/Erro" }
+    post:
+      tags: [nodes]
+      operationId: criarNo
+      summary: Grava um caminho que ainda não existe no servidor
+      description: |
+        `set`/`update` num caminho sem registro. 400 (violação do índice único `owner+path`, nó criado por
+        outro aparelho) → o adaptador busca o nó (`listarNos` com `perPage=1`) e faz `atualizarNo`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [owner, path, data]
+              properties:
+                owner: { type: string, description: "deve ser o próprio técnico (createRule)" }
+                path: { $ref: "#/components/schemas/Caminho" }
+                data: { $ref: "#/components/schemas/Embrulho" }
+      responses:
+        "200":
+          description: criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/No" }
+        "400": { $ref: "#/components/responses/Erro" }
+
+  /api/collections/nodes/records/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, pattern: "^[a-z0-9]{15}$" }
+    patch:
+      tags: [nodes]
+      operationId: atualizarNo
+      summary: Regrava o valor de um caminho existente
+      description: Uma requisição por gravação (fluxdb 1.1). Gravações seguidas no mesmo caminho pegam carona na que está na fila.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data: { $ref: "#/components/schemas/Embrulho" }
+      responses:
+        "200":
+          description: atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/No" }
+        "400": { $ref: "#/components/responses/Erro" }
+        "404": { $ref: "#/components/responses/Erro" }
+    delete:
+      tags: [nodes]
+      operationId: apagarNo
+      summary: Apaga um caminho (remove, set null, ou descendente de um set)
+      description: 404 é tratado como sucesso (já apagado).
+      responses:
+        "204": { description: apagado }
+        "404": { $ref: "#/components/responses/Erro" }
+
+  /api/fluxgk/versoes:
+    get:
+      tags: [versoes]
+      operationId: painelDeVersoes
+      summary: Tela Configurações → Versões (só admin)
+      description: |
+        Rota própria (`pb_hooks/versoes.pb.js`). Admin = superusuário ou conta de `users` com e-mail em
+        `FLUXGK_ADMINS`. Os dados vêm do GitHub (releases, compare main...develop, execuções do `ci` e do
+        `implantar`), em cache de 45 s; `?atualizar=1` ignora o cache. A versão no ar vem de `http://nginx/versao.json`.
+      parameters:
+        - name: atualizar
+          in: query
+          schema: { type: string, enum: ["1"] }
+      responses:
+        "200":
+          description: painel
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PainelDeVersoes" }
+        "401": { $ref: "#/components/responses/Erro" }
+        "403": { $ref: "#/components/responses/Erro" }
+        "502":
+          description: GitHub indisponível; traz só `noAr`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  noAr: { $ref: "#/components/schemas/NoAr" }
+
+  /api/fluxgk/versoes/implantar:
+    post:
+      tags: [versoes]
+      operationId: implantarVersao
+      summary: Pede a troca de versão de PRD (dispara o workflow `implantar`)
+      description: |
+        Só admin, só com `AMBIENTE=prd` e `GH_TOKEN_IMPLANTAR`. `nova` exige versão nova em HML com CI verde;
+        `existente` exige uma versão publicada que não seja a que está no ar. Recusa se já houver troca em andamento.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acao]
+              properties:
+                acao: { type: string, enum: [nova, existente] }
+                versao: { type: string, pattern: "^1\\.\\d{4}\\.\\d{3}$", description: "só para existente" }
+      responses:
+        "202":
+          description: pedido aceito pelo GitHub
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { const: true }
+                  acao: { type: string }
+                  versao: { type: string }
+        "401": { $ref: "#/components/responses/Erro" }
+        "403": { $ref: "#/components/responses/Erro" }
+        "409": { $ref: "#/components/responses/Erro" }
+
+  /api/realtime:
+    get:
+      tags: [realtime]
+      operationId: abrirTempoReal
+      summary: Abre o fluxo SSE
+      description: |
+        Primeiro evento: `PB_CONNECT` com `clientId`. Depois, um evento `nodes/*` por criação, alteração ou
+        remoção de nó do técnico (a regra `listRule/viewRule` filtra por dono). O adaptador aplica o evento na
+        cópia local e avisa os `on('value')` do caminho, ancestrais e descendentes. Ignora: evento de outro
+        dono; remoção de caminho que não está na cópia ou com gravação local em voo; criação ou alteração de um
+        id que este aparelho acabou de apagar (eco atrasado); alteração com `updated` mais antigo que o da cópia.
+        Proxies: 24 h no nginx da stack; 300 s no Hestia (ver infraestrutura).
+      responses:
+        "200":
+          description: fluxo de eventos
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  event: PB_CONNECT
+                  data: {"clientId":"..."}
+
+                  event: nodes/*
+                  data: {"action":"create|update|delete","record":{...No...}}
+    post:
+      tags: [realtime]
+      operationId: inscreverTempoReal
+      summary: Inscreve o cliente nos tópicos
+      description: O adaptador inscreve só `nodes/*`, depois do login; logout e troca de usuário cancelam.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, subscriptions]
+              properties:
+                clientId: { type: string }
+                subscriptions:
+                  type: array
+                  items: { type: string, enum: ["nodes/*"] }
+      responses:
+        "204": { description: inscrito }
+        "404": { $ref: "#/components/responses/Erro" }
+
+components:
+  securitySchemes:
+    tokenUsuario:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token JWT do PocketBase (sem prefixo `Bearer`), devolvido no login e guardado em `localStorage.pocketbase_auth`.
+  responses:
+    Erro:
+      description: erro no formato do PocketBase
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: integer }
+              message: { type: string }
+              data:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    code: { type: string }
+                    message: { type: string }
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id: { type: string, description: "é o `uid` do app" }
+        collectionId: { type: string }
+        collectionName: { const: users }
+        email: { type: string, format: email }
+        emailVisibility: { type: boolean }
+        verified: { type: boolean }
+        name: { type: string }
+        created: { type: string }
+        updated: { type: string }
+    RespostaAuth:
+      type: object
+      required: [token, record]
+      properties:
+        token: { type: string }
+        record: { $ref: "#/components/schemas/Usuario" }
+    Caminho:
+      type: string
+      maxLength: 1024
+      description: |
+        Caminho do antigo Realtime Database, sem barras nas pontas, sempre começando em `users/<uid>/`.
+        Único por `owner`. Ver `../data-dictionary.md` para a árvore completa.
+      examples:
+        - users/<uid>/profile
+        - users/<uid>/data/<clubId>/<seasonId>/planner/sessions/1760300000000
+        - users/<uid>/scouting
+    Embrulho:
+      type: object
+      required: [v]
+      description: |
+        O valor gravado pela página, embrulhado porque o campo `json` do PocketBase guarda objeto e o app grava
+        também número, texto e booleano soltos. Limite do campo: 5 MB (5.242.880 bytes).
+      properties:
+        v:
+          description: qualquer valor JSON
+    No:
+      type: object
+      required: [id, owner, path, data]
+      properties:
+        id: { type: string }
+        collectionId: { type: string }
+        collectionName: { const: nodes }
+        owner: { type: string, description: "users.id; apagar o usuário apaga os nós (cascata)" }
+        path: { $ref: "#/components/schemas/Caminho" }
+        data: { $ref: "#/components/schemas/Embrulho" }
+        created: { type: string }
+        updated: { type: string, description: "usado pelo adaptador para descartar eventos velhos" }
+    NoAr:
+      type: object
+      properties:
+        versao: { type: string }
+        build: { type: string }
+    PainelDeVersoes:
+      type: object
+      properties:
+        noAr: { $ref: "#/components/schemas/NoAr" }
+        ambiente: { type: string, enum: [prd, hml] }
+        repo: { type: string }
+        podeTrocar: { type: boolean }
+        motivoSemTroca: { type: string }
+        nova:
+          type: [object, "null"]
+          properties:
+            versao: { type: string }
+            existente: { type: boolean, description: "develop parado numa release já publicada" }
+            mudancas:
+              type: array
+              items: { type: object, properties: { sha: { type: string }, msg: { type: string }, data: { type: string } } }
+            ciVerde: { type: boolean }
+            ciEstado: { type: string }
+            ciUrl: { type: string }
+        versoes:
+          type: array
+          items: { type: object, properties: { versao: { type: string }, data: { type: string }, notas: { type: string }, url: { type: string } } }
+        historico:
+          type: array
+          items: { type: object, properties: { titulo: { type: string }, quando: { type: string }, estado: { type: string }, resultado: { type: string }, url: { type: string } } }
+        emAndamento: { type: [object, "null"] }
+x-regras-de-acesso:
+  users:
+    createRule: "'' (aberto)"
+    listRule: "id = @request.auth.id"
+    viewRule: "id = @request.auth.id"
+    updateRule: "id = @request.auth.id"
+    deleteRule: "id = @request.auth.id"
+  nodes:
+    listRule: "owner = @request.auth.id"
+    viewRule: "owner = @request.auth.id"
+    createRule: "owner = @request.auth.id"
+    updateRule: "owner = @request.auth.id"
+    deleteRule: "owner = @request.auth.id"
+  indices:
+    - "UNIQUE (owner, path)"
+    - "(path)"

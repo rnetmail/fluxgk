@@ -1,0 +1,1302 @@
+{
+  "generated_at": "2026-10-13T01:37:47Z",
+  "modules": [
+    {
+      "name": "hub",
+      "path": "index.html",
+      "purpose": "Login, clube/temporada, perfil do técnico, painel e carga dos módulos em iframe",
+      "primary_files": [
+        "index.html"
+      ],
+      "functions": [
+        {
+          "name": "boot",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 960
+        },
+        {
+          "name": "loadAll",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 405
+        },
+        {
+          "name": "loadStats",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 490
+        },
+        {
+          "name": "openModule",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 940
+        },
+        {
+          "name": "ctxPayload",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 907
+        },
+        {
+          "name": "saveClub",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 834
+        },
+        {
+          "name": "deleteClub",
+          "file": "index.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 867
+        }
+      ],
+      "entities": [
+        {
+          "name": "Clube",
+          "fields": [
+            {
+              "name": "meta.name",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "meta.abbr",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "meta.color",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "badge",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "seasons",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "opponents",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Sessões do painel contam eventos únicos date|time|trainingType",
+          "location": "index.html:490",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Goleiros ativos = status vazio ou 'ativo'",
+          "location": "index.html:556",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Escudo do clube até 500 KB, gravado em base64",
+          "location": "index.html:823",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Falha de carga não é tratada como conta vazia",
+          "location": "index.html:446",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "fluxdb",
+      "path": "static/pocketbase-adapter.js",
+      "purpose": "Imita a API do Firebase RTDB (compat e modular) sobre a coleção nodes do PocketBase",
+      "primary_files": [
+        "static/pocketbase-adapter.js",
+        "pb_migrations/1760270000_init_fluxgk.js"
+      ],
+      "functions": [
+        {
+          "name": "readPath",
+          "file": "static/pocketbase-adapter.js",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 211
+        },
+        {
+          "name": "writePath",
+          "file": "static/pocketbase-adapter.js",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 218
+        },
+        {
+          "name": "updatePath",
+          "file": "static/pocketbase-adapter.js",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 253
+        },
+        {
+          "name": "notify",
+          "file": "static/pocketbase-adapter.js",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 303
+        },
+        {
+          "name": "ensureSubscription",
+          "file": "static/pocketbase-adapter.js",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 278
+        }
+      ],
+      "entities": [
+        {
+          "name": "nodes",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "path",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "data.v",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "created",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "updated",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Escrita apaga todos os descendentes do caminho",
+          "location": "static/pocketbase-adapter.js:218",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Isolamento por owner = @request.auth.id",
+          "location": "pb_migrations/1760270000_init_fluxgk.js",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [],
+      "algorithms": [
+        "Resolução em 3 camadas: ancestral, exato, descendentes",
+        "Releitura completa por listener a cada mudança"
+      ],
+      "complexity": "high"
+    },
+    {
+      "name": "planner",
+      "path": "mod_planner.html",
+      "purpose": "Sessões de treino, pós-treino e biblioteca de exercícios",
+      "primary_files": [
+        "mod_planner.html"
+      ],
+      "functions": [
+        {
+          "name": "_persistSessionToLibrary",
+          "file": "mod_planner.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 2101
+        },
+        {
+          "name": "confirmEx",
+          "file": "mod_planner.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 734
+        },
+        {
+          "name": "flushPending",
+          "file": "mod_planner.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 822
+        },
+        {
+          "name": "_ligarListeners",
+          "file": "mod_planner.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 1855
+        },
+        {
+          "name": "buscarOutrasTemporadas",
+          "file": "mod_planner.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 1431
+        }
+      ],
+      "entities": [
+        {
+          "name": "Sessão",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "date",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "time",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "duration",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "type",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "players",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "objective",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "method",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "exercises",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "rating",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "objMet",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postPositive",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postImprovement",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postAffordances",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postConstraints",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postEmergent",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "postNext",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "closedAt",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        },
+        {
+          "name": "Exercício",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "phase",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "name",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "duration",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "players",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "desc",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "goal",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "variations",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "materials",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "img",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "imgQ",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "tatica",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Imagens reduzidas a 1000 px JPEG 0,88",
+          "location": "mod_planner.html:861",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Fila de reenvio a cada 15 s",
+          "location": "mod_planner.html:842",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Notas de pós-treino por goleiro/exercício não são gravadas",
+          "location": "mod_planner.html:1196",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n",
+        "tatica3d"
+      ],
+      "algorithms": [],
+      "complexity": "high"
+    },
+    {
+      "name": "periodization",
+      "path": "mod_periodization.html",
+      "purpose": "Macro, meso e microciclos, eventos e temas por dia",
+      "primary_files": [
+        "mod_periodization.html"
+      ],
+      "functions": [
+        {
+          "name": "save",
+          "file": "mod_periodization.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 312
+        }
+      ],
+      "entities": [
+        {
+          "name": "Periodização",
+          "fields": [
+            {
+              "name": "macro",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "meso",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "micro",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "events",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "comps",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "dayThemes",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "updatedAt",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Documento único regravado a cada edição",
+          "location": "mod_periodization.html:312",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "xg",
+      "path": "mod_xg.html",
+      "purpose": "Mapa de chutes e cálculo de gols esperados",
+      "primary_files": [
+        "mod_xg.html"
+      ],
+      "functions": [
+        {
+          "name": "xgRaw",
+          "file": "mod_xg.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 562
+        },
+        {
+          "name": "computeXG",
+          "file": "mod_xg.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 563
+        }
+      ],
+      "entities": [],
+      "business_rules": [
+        {
+          "description": "xG limitado entre 0,01 e 0,97",
+          "location": "mod_xg.html:562",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Pênalti 0,76/0,95 e tiro de 10 m 0,65/0,88",
+          "location": "mod_xg.html:563",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Configurações não chegam à nuvem (FB.set inexistente)",
+          "location": "mod_xg.html:938",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [
+        "Modelo multiplicativo de xG por distância, ângulo e contexto"
+      ],
+      "complexity": "high"
+    },
+    {
+      "name": "stats",
+      "path": "mod_stats.html",
+      "purpose": "Estatística de goleiro por jogo",
+      "primary_files": [
+        "mod_stats.html"
+      ],
+      "functions": [
+        {
+          "name": "persist",
+          "file": "mod_stats.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 848
+        },
+        {
+          "name": "persistGame",
+          "file": "mod_stats.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 873
+        },
+        {
+          "name": "newGame",
+          "file": "mod_stats.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 840
+        }
+      ],
+      "entities": [
+        {
+          "name": "Jogo",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "date",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "opponent",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "competition",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "gk",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "season",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "homeAway",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "venue",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "gf",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "ga",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "outcome",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "shots",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "offActions",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "persist regrava 9 listas e adversários a cada alteração",
+          "location": "mod_stats.html:848",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [],
+      "complexity": "high"
+    },
+    {
+      "name": "minutes",
+      "path": "mod_minutes.html",
+      "purpose": "Minutagem de goleiros por jogo",
+      "primary_files": [
+        "mod_minutes.html"
+      ],
+      "functions": [
+        {
+          "name": "collectGameData",
+          "file": "mod_minutes.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 759
+        },
+        {
+          "name": "saveGame",
+          "file": "mod_minutes.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 794
+        },
+        {
+          "name": "persist",
+          "file": "mod_minutes.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 500
+        }
+      ],
+      "entities": [
+        {
+          "name": "Jogo de minutagem",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "date",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "opp",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "comp",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "season",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "totalMin",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "halfMin",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "hasOT",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "etMin",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "gkData",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Adversários gravados sem escudo, sobrescrevendo stats/xg",
+          "location": "mod_minutes.html:509",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Goleiro identificado pelo nome em gkData",
+          "location": "mod_minutes.html:786",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "data",
+      "path": "mod_data.html",
+      "purpose": "Load Control: elenco, bem-estar, PSE, UA e ACWR",
+      "primary_files": [
+        "mod_data.html"
+      ],
+      "functions": [
+        {
+          "name": "rtPushAll",
+          "file": "mod_data.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 1072
+        },
+        {
+          "name": "rtListen",
+          "file": "mod_data.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 1099
+        },
+        {
+          "name": "calcUA",
+          "file": "mod_data.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 1487
+        }
+      ],
+      "entities": [
+        {
+          "name": "Jogador",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "name",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "photo",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "status",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "statusDesde",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "statusNota",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        },
+        {
+          "name": "Registro de carga",
+          "fields": [
+            {
+              "name": "id",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "date",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "type",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "pse",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "duration",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "ua",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "UA = PSE × duração",
+          "location": "mod_data.html:1487",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "ACWR 7/28 sobre datas com treino, não dias corridos",
+          "location": "mod_data.html:2184",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "rtPushAll reenvia todo o cache local ao abrir",
+          "location": "mod_data.html:1072",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [
+        "ACWR por médias móveis 7/28"
+      ],
+      "complexity": "high"
+    },
+    {
+      "name": "profile",
+      "path": "mod_profile.html",
+      "purpose": "Ficha do goleiro, avaliações e diário",
+      "primary_files": [
+        "mod_profile.html"
+      ],
+      "functions": [
+        {
+          "name": "FDB.init",
+          "file": "mod_profile.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 2079
+        }
+      ],
+      "entities": [
+        {
+          "name": "Perfil",
+          "fields": [
+            {
+              "name": "nick",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "number",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "birth",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "nationality",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "team",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "season",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "contract",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "height",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "weight",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "wingspan",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "hand",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "foot",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "hist",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "plan",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "scores",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "item_notes",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "strengths",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "weaknesses",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "archived",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Elenco é só leitura aqui; dono é o Load Control",
+          "location": "mod_profile.html:2160",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Uma avaliação por goleiro por data",
+          "location": "mod_profile.html:2126",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "data"
+      ],
+      "algorithms": [],
+      "complexity": "high"
+    },
+    {
+      "name": "scouting",
+      "path": "mod_scouting.html",
+      "purpose": "Observação de goleiros de outros clubes",
+      "primary_files": [
+        "mod_scouting.html"
+      ],
+      "functions": [
+        {
+          "name": "subirTudo",
+          "file": "mod_scouting.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 178
+        },
+        {
+          "name": "ligarListener",
+          "file": "mod_scouting.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 298
+        }
+      ],
+      "entities": [],
+      "business_rules": [
+        {
+          "description": "Só envia goleiros cujo JSON mudou",
+          "location": "mod_scouting.html:178",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb"
+      ],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "video",
+      "path": "mod_video.html",
+      "purpose": "Video Lab: lances, playlists, dashboards e exportação de cortes",
+      "primary_files": [
+        "mod_video.html"
+      ],
+      "functions": [
+        {
+          "name": "pushToCloud",
+          "file": "mod_video.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 9227
+        },
+        {
+          "name": "pullFromCloud",
+          "file": "mod_video.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 9282
+        },
+        {
+          "name": "initCloud",
+          "file": "mod_video.html",
+          "params": [],
+          "returns": "",
+          "confidence": "confirmed",
+          "line": 9201
+        }
+      ],
+      "entities": [
+        {
+          "name": "Documento de vídeo",
+          "fields": [
+            {
+              "name": "library",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "dashboards",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "projects",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "gks",
+              "type": "",
+              "required": false
+            },
+            {
+              "name": "updatedAt",
+              "type": "",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        {
+          "description": "Vídeos ficam só no computador (File System Access)",
+          "location": "mod_video.html:1721",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "Documento único regravado a cada edição (debounce 600 ms)",
+          "location": "mod_video.html:9227",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "No conflito, fica a versão com mais lances",
+          "location": "mod_video.html:9295",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [
+        "fluxdb",
+        "i18n"
+      ],
+      "algorithms": [
+        "Corte em keyframe com mp4box",
+        "Recodificação canvas + MediaRecorder"
+      ],
+      "complexity": "high"
+    },
+    {
+      "name": "tatica3d",
+      "path": "tatica3d.html",
+      "purpose": "Prancheta tática 3D (three.js)",
+      "primary_files": [
+        "tatica3d.html"
+      ],
+      "functions": [],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": [
+        "planner"
+      ],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "i18n",
+      "path": "fluxgk-i18n.js",
+      "purpose": "Traduções en/pt e aplicação no DOM",
+      "primary_files": [
+        "fluxgk-i18n.js"
+      ],
+      "functions": [],
+      "entities": [],
+      "business_rules": [
+        {
+          "description": "Fallback para en quando falta a chave",
+          "location": "fluxgk-i18n.js:2178",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "infra",
+      "path": "docker-compose.yml",
+      "purpose": "Stack nginx + PocketBase atrás do Hestia",
+      "primary_files": [
+        "docker-compose.yml",
+        "Dockerfile.nginx",
+        "Dockerfile.pocketbase",
+        "nginx/conf.d/default.conf",
+        "docker/pocketbase-entrypoint.sh"
+      ],
+      "functions": [],
+      "entities": [],
+      "business_rules": [
+        {
+          "description": "Porta só no loopback",
+          "location": "docker-compose.yml",
+          "confidence": "confirmed"
+        },
+        {
+          "description": "IP real via X-Forwarded-For do Hestia",
+          "location": "nginx/conf.d/default.conf",
+          "confidence": "confirmed"
+        }
+      ],
+      "dependencies": [],
+      "algorithms": [],
+      "complexity": "low"
+    }
+  ]
+}
