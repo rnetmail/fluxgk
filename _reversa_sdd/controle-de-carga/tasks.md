@@ -120,6 +120,17 @@
   - Critério de pronto: falar preenche o campo
   - Confiança: 🟢 (D-26: reconhecimento de voz do navegador primeiro; serviço externo só se a qualidade não servir)
 
+### Autoavaliação do goleiro (pedido de 13/10)
+
+- [x] T-AUTO-1, Coleção `autoavaliacao_links`, rotas públicas e gravação na árvore do técnico — **feito em 13/10** (`tools/smoke-auto.mjs`, 15 verificações, no CI)
+- [x] T-AUTO-2, Página pública `mod_autoavaliacao.html` para o celular — **feito em 13/10**
+- [x] T-AUTO-3, Load Control: link por goleiro, WhatsApp, revogar, respostas e cartão no painel — **feito em 13/10** (ponta a ponta em HML: gerar link, responder no celular, chegar ao vivo, revogar)
+- [ ] T-AUTO-4, Gráfico da autoavaliação na série temporal e no PDF do goleiro
+  - Critério de pronto: humor, sono e alimentação aparecem como linhas no painel e no relatório
+  - Confiança: 🟡 (não pedido; natural para a próxima volta)
+- [ ] T-AUTO-5, Lembrete diário ao goleiro (notificação ou mensagem)
+  - Confiança: 🔴 (canal a definir: WhatsApp Business, e-mail, push)
+
 ## Tarefas de Teste
 
 - [ ] TT-01, Pré-treino com bem-estar (Critério 1)

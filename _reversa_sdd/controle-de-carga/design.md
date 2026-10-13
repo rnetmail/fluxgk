@@ -49,6 +49,15 @@ No navegador, cada registro ganha `_pk` (id do goleiro), retirado antes de grava
 | `repairPrePostLinks` / `migrateWellbeingScale` | `()` | `n` | consertos idempotentes |
 | `getPS` / `getFS` | `()` | registros | do goleiro atual / filtrados por semanas |
 
+### Autoavaliação do goleiro (desde 13/10) 🟢
+| Peça | Onde | Papel |
+|---|---|---|
+| `autoavaliacao_links` | `pb_migrations/1760400000_autoavaliacao_links.js` | `{owner, base, playerId, playerName, clubName, token, ativo}`; só o dono acessa |
+| rotas públicas | `pb_hooks/autoavaliacao.pb.js`, `fluxgk_autoavaliacao.js` | `GET`/`POST /api/fluxgk/auto/{token}`; grava `nodes` na árvore do técnico |
+| página do goleiro | `mod_autoavaliacao.html?t=<token>` | 3 escalas de rostinhos 1..5 + observação; `noindex`, `no-referrer` |
+| técnico | `mod_data.html`: `openAuto`, `_linkAuto`, `copyAuto`, `whatsAuto`, `revokeAuto`, `renderAutoLista`, cartão em `renderDashboard` | o link é criado na primeira abertura; as respostas chegam em `rem.auto` pela mesma escuta |
+Resposta: `{date, humor, sono, alimentacao, obs?, em}`. Data no fuso da stack (`TZ`).
+
 ## Fluxo Principal
 1. Contexto (sem conferir a janela de origem): `_uid`, `_base = dataPath`, `_cfg`; idioma; identidade pelo formato antigo `profile` (`mod_data.html:2596-2620`).
 2. Primeira vez: `fbInit()` → `onAuthStateChanged`. Com usuário: indicador verde → `loadUserState()` → **`rtPushAll()`** → `rtListen()` → `renderAll()` (`:2621-2636`).

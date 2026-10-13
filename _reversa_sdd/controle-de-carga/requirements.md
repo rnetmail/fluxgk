@@ -28,6 +28,8 @@ histórico e relatórios em PDF. É **dono do elenco** usado pelo hub e pelo Per
 - 🟢 RN-13 Ao abrir, o módulo **lê a nuvem e concilia registro a registro** (`fluxgkReconciliarCarga`): nos dois lados vence o mais recente (`mt`/`ts`, D-11); só aqui sem `_sync` sobe; só aqui com `_sync` foi apagado em outro aparelho e sai; só na nuvem com lápide é apagado lá. Goleiro nunca é regravado inteiro. **Corrigido em 13/10** — antes, o `rtPushAll` enviava a cópia do navegador antes de ler, desfazia alterações de outro aparelho e apagava foto e status.
 - 🔴 RN-14 Descanso e falta hoje contam como sessão no painel do hub; **decisão do dono (D-01, D-08):** descanso conta como descanso e falta como categoria própria.
 
+- 🟢 RN-15 **Autoavaliação do goleiro (desde 13/10):** cada goleiro pode ter um link fixo, sem login (código aleatório de 48 hex em `autoavaliacao_links`), para responder todo dia humor, sono e alimentação de 1 a 5, com observação opcional de até 500 caracteres. A resposta vai para `<dataPath>/load/auto/<goleiro>/<AAAA-MM-DD>`; uma por dia, a última vale. Desativar gera um código novo e o antigo passa a dar 404. Decisões do dono: registro próprio (não mistura com o pré-treino), link fixo, sem login.
+
 ## Requisitos Funcionais
 
 | ID | Requisito | Prioridade | Critério de Aceite |
@@ -47,6 +49,8 @@ histórico e relatórios em PDF. É **dono do elenco** usado pelo hub e pelo Per
 | RF-13 | **Correção:** gravar foto e status sem apagar um ao outro (campos do mesmo nó) | Must | Mudar status não apaga a foto |
 | RF-14 | **Evolução (D-03):** parâmetro "método do ACWR" (datas com treino / dias corridos), editável só pelo Administrador | Should | Com "dias corridos", folgas entram como 0 nas janelas de 7 e 28 dias |
 | RF-15 | **Evolução (D-02):** ditado por voz nos campos de texto (nota do status, campos extras) | Could | Falar preenche o campo |
+
+| RF-AUTO | Link de autoavaliação por goleiro (copiar, WhatsApp, desativar e gerar outro), página pública para o celular, respostas dos últimos 14 dias e cartão no painel (última e média de 7 dias), ao vivo | Must | `tools/smoke-auto.mjs` (15) e ponta a ponta em HML |
 
 ## Requisitos Não Funcionais
 

@@ -24,6 +24,9 @@
 | GET | `/versao.json` | `{"versao":"1.<ano>.<seq>","ambiente":"prd\|hml","build":"<12 hex>"}` | `application/json` | `no-cache, no-store, must-revalidate` | escrito na partida do nginx |
 | GET | `/api/fluxgk/versoes` | painel de versões (ver `../openapi/pocketbase-fluxgk.yaml`) | JSON | — | `pb_hooks`; 401 sem login, 403 se não for admin |
 | POST | `/api/fluxgk/versoes/implantar` | `202 {ok, acao, versao}` ou `409 {message}` | JSON | — | só admin; só com `AMBIENTE=prd` e `GH_TOKEN_IMPLANTAR` |
+| GET | `/api/fluxgk/auto/{token}` | `{goleiro, clube, hoje, resposta}` ou 404 | JSON | — | pública; autoavaliação do goleiro |
+| POST | `/api/fluxgk/auto/{token}` | `{ok, data}`, 400 (validação) ou 404 | JSON | — | pública; grava a resposta do dia |
+| GET | `/mod_autoavaliacao.html?t=<token>` | página do goleiro | `text/html` | padrão | `noindex`, `no-referrer` |
 | GET | `/api/health` | `200` JSON do PocketBase | `application/json` | — | repassado |
 | GET | `/api/realtime` | fluxo SSE | `text/event-stream` | `no-store` (do PocketBase) | sem buffer no contêiner; 24 h de leitura |
 | POST | `/api/realtime` | `204` | — | — | inscrição nos tópicos (`clientId` + `subscriptions`) |

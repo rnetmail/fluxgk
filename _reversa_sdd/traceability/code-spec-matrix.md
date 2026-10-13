@@ -29,6 +29,9 @@
 |---|---|---|---|---|
 | `pb_hooks/versoes.pb.js` | 29 | `infraestrutura/` | `hub`, `openapi` | 🟢 |
 | `pb_hooks/fluxgk_versoes.js` | 188 | `infraestrutura/` | `hub`, `openapi` | 🟢 |
+| `pb_hooks/autoavaliacao.pb.js`, `pb_hooks/fluxgk_autoavaliacao.js` | — | `controle-de-carga/` | `infraestrutura`, `openapi` | 🟢 |
+| `pb_migrations/1760400000_autoavaliacao_links.js` | — | `controle-de-carga/` | `infraestrutura` | 🟢 |
+| `mod_autoavaliacao.html` | — | `controle-de-carga/` | `infraestrutura` | 🟢 |
 | `pb_migrations/1760270000_init_fluxgk.js` | 80 | `infraestrutura/` | `adaptador-fluxdb`, `hub`, `openapi` | 🟢 |
 | `docker/pocketbase-entrypoint.sh` | 29 | `infraestrutura/` | | 🟢 |
 | `nginx/conf.d/default.conf` | 106 | `infraestrutura/` (+ `contracts.md`) | | 🟢 |

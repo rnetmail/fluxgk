@@ -31,6 +31,9 @@ tags:
   - name: realtime
   - name: versoes
     description: rotas próprias em pb_hooks (tela de versões do admin)
+  - name: autoavaliacao
+    description: rotas públicas em pb_hooks (autoavaliação do goleiro, sem login)
+    description: rotas próprias em pb_hooks (tela de versões do admin)
 security:
   - tokenUsuario: []
 paths:
@@ -301,6 +304,56 @@ paths:
         "403": { $ref: "#/components/responses/Erro" }
         "409": { $ref: "#/components/responses/Erro" }
 
+  /api/fluxgk/auto/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string, pattern: "^[a-f0-9]{32,64}$" }
+    get:
+      tags: [autoavaliacao]
+      operationId: abrirAutoavaliacao
+      summary: Página do goleiro — dados do link (pública, sem login)
+      security: []
+      responses:
+        "200":
+          description: link ativo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  goleiro: { type: string }
+                  clube: { type: string }
+                  hoje: { type: string, format: date }
+                  resposta: { type: [object, "null"], description: "resposta de hoje, se houver" }
+        "404": { $ref: "#/components/responses/Erro" }
+    post:
+      tags: [autoavaliacao]
+      operationId: responderAutoavaliacao
+      summary: Grava a resposta do dia na árvore do técnico (pública; uma por dia, a última vale)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [humor, sono, alimentacao]
+              properties:
+                humor: { type: integer, minimum: 1, maximum: 5 }
+                sono: { type: integer, minimum: 1, maximum: 5 }
+                alimentacao: { type: integer, minimum: 1, maximum: 5 }
+                obs: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: gravada em <base>/load/auto/<goleiro>/<data>
+          content:
+            application/json:
+              schema: { type: object, properties: { ok: { const: true }, data: { type: string, format: date } } }
+        "400": { $ref: "#/components/responses/Erro" }
+        "404": { $ref: "#/components/responses/Erro" }
+
   /api/realtime:
     get:
       tags: [realtime]
@@ -453,6 +506,9 @@ components:
           items: { type: object, properties: { titulo: { type: string }, quando: { type: string }, estado: { type: string }, resultado: { type: string }, url: { type: string } } }
         emAndamento: { type: [object, "null"] }
 x-regras-de-acesso:
+  autoavaliacao_links:
+    todas: "owner = @request.auth.id"
+    indices: ["UNIQUE (token)", "(owner, base, playerId)"]
   users:
     createRule: "'' (aberto)"
     listRule: "id = @request.auth.id"
