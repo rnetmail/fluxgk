@@ -21,6 +21,10 @@ COPY assets/ /usr/share/nginx/html/assets/
 COPY VERSION /etc/fluxgk/VERSION
 COPY docker/nginx-versao.sh /docker-entrypoint.d/40-fluxgk-versao.sh
 RUN chmod +x /docker-entrypoint.d/40-fluxgk-versao.sh
+# Impressão digital do que vai ao ar (páginas, estáticos, conf do nginx, versão): o CI constrói a
+# mesma imagem, calcula a mesma impressão e espera ela aparecer em /versao.json depois do deploy.
+RUN find /usr/share/nginx/html /etc/nginx/conf.d /etc/fluxgk /docker-entrypoint.d/40-fluxgk-versao.sh -type f -exec sha256sum {} + \
+      | sort -k2 | sha256sum | cut -c1-12 > /tmp/build && mv /tmp/build /etc/fluxgk/BUILD
 
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
