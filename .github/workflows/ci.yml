@@ -88,11 +88,21 @@ jobs:
           B: ${{ needs.verificar.outputs.build }}
         run: |
           test -n "$B" || { echo "::error::sem impressão digital do job verificar"; exit 1; }
+          # O Portainer recria os contêineres mesmo sem mudança (~40 s fora). Esperar a recriação
+          # começar, senão a conferência passa no contêiner antigo quando a impressão não mudou.
+          sleep 45
           for i in $(seq 60); do
             J=$(curl -fsS "https://hml.fluxgk.rstecbr.com.br/versao.json?t=$(date +%s)" || true)
             echo "$J" | grep -q "\"build\":\"${B}\"" && { echo "no ar: $J"; break; }
             sleep 10
           done
           echo "$J" | grep -q "\"build\":\"${B}\"" || { echo "::error::HML não mostrou o build $B de ${GITHUB_SHA} em 10 min (último: $J)"; exit 1; }
+          # duas leituras saudáveis seguidas, com 15 s entre elas
+          for n in 1 2; do
+            sleep 15
+            curl -fsS https://hml.fluxgk.rstecbr.com.br/api/health >/dev/null \
+              && curl -fsS "https://hml.fluxgk.rstecbr.com.br/versao.json?t=$n" | grep -q "\"build\":\"${B}\"" \
+              || { echo "::error::HML instável depois do deploy"; exit 1; }
+          done
           echo "### HML: ${GITHUB_SHA::7} no ar (build $B)" >> "$GITHUB_STEP_SUMMARY"
           curl -fsS https://hml.fluxgk.rstecbr.com.br/api/health

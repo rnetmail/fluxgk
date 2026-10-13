@@ -90,6 +90,7 @@ jobs:
         env:
           V: ${{ steps.v.outputs.versao }}
         run: |
+          sleep 45   # o Portainer recria os contêineres; não conferir o antigo
           for i in $(seq 60); do
             J=$(curl -fsS "https://fluxgk.rstecbr.com.br/versao.json?t=$(date +%s)" || true)
             echo "$J" | grep -q "\"versao\":\"${V}\"" && { echo "no ar: $J"; break; }
