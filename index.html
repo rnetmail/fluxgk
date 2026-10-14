@@ -351,6 +351,7 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
     <div id="s-assin" style="display:none">
       <div class="sec"></div>
       <div class="sect" data-i18n="assin.title">Subscriptions</div>
+      <div id="s-integ"></div>
       <div id="s-assin-corpo"></div>
     </div>
     <div class="sec"></div>
@@ -1227,6 +1228,7 @@ async function carregarAssinaturas(){
   try{contas=await pb.send('/api/fluxgk/admin/contas',{method:'GET'});}
   catch(e){box.style.display='none';return;}            /* 403: não é admin */
   box.style.display='block';
+  carregarIntegracoes();
   var precos=PLANO.planos.map(function(p){
     return '<div class="prow"><span class="fl" style="flex:0 0 100%;margin:6px 0 2px">'+_escV(planoNome(p.plano))+'</span>'
       +'<input class="fi" id="pr-m-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.monthly'))+'" value="'+(p.mensalCentavos!=null?(p.mensalCentavos/100).toFixed(2):'')+'">'
@@ -1250,6 +1252,62 @@ async function carregarAssinaturas(){
     +'<div class="prow"><input class="fi" id="nc-email" type="email" placeholder="email@clube.com"><input class="fi" id="nc-senha" type="text" autocomplete="off" placeholder="'+_escV(TX('assin.password'))+'"></div>'
     +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>'
     +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.prices'))+'</div>'+precos;
+}
+/* ---------- INTEGRAÇÕES (Admin): provedor ativo, chaves cifradas no servidor, Google ----------
+   O servidor nunca devolve chave em claro: a tela mostra "definida · final XXXX". Campo vazio = mantém. */
+var _INTEG=null;
+function _segredoUi(id,rot,info){
+  var est=info&&info.definida?_txa('defined',{f:info.final,o:TX('assin.src.'+(info.origem||'tela'))}):TX('assin.notDefined');
+  return '<label class="fl" for="'+id+'">'+_escV(rot)+'</label>'
+    +'<div class="prow"><input class="fi" id="'+id+'" type="password" autocomplete="off" placeholder="'+_escV(est)+'">'
+    +(info&&info.definida&&info.origem==='tela'?'<button class="btn btsec" onclick="apagarSegredo(\''+id+'\')">'+_escV(TX('assin.clear'))+'</button>':'')+'</div>';
+}
+async function carregarIntegracoes(){
+  var box=document.getElementById('s-integ'),pb=_pbV();if(!box||!pb)return;
+  try{_INTEG=await pb.send('/api/fluxgk/admin/integracoes',{method:'GET'});}catch(e){box.innerHTML='';return;}
+  var d=_INTEG,u=d.urlPublica||location.origin;
+  var radio=function(v,rot){return '<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:6px"><input type="radio" name="integ-prov" value="'+v+'"'+(d.provedorAtivo===v?' checked':'')+'> '+_escV(rot)+'</label>';};
+  box.innerHTML='<div class="fl">'+_escV(TX('assin.integ'))+'</div>'
+    +(d.cifra?'':'<div class="pfaixa pvenc" style="display:block">'+_escV(TX('assin.noCipher'))+'</div>')
+    +'<div class="pinfo">'+_escV(TX('assin.activeProvider'))+'</div>'+radio('stripe','Stripe')+radio('mercadopago','Mercado Pago')
+    +'<label class="fl" for="ig-url" style="margin-top:10px">'+_escV(TX('assin.publicUrl'))+'</label><input class="fi" id="ig-url" value="'+_escV(d.urlPublica||'')+'" placeholder="'+_escV(location.origin)+'">'
+    +'<div class="sect" style="margin-top:6px">Stripe</div>'
+    +_segredoUi('ig-stripeSecretKey',TX('assin.secretKey'),d.stripe.chave)+_segredoUi('ig-stripeWebhookSecret',TX('assin.webhookSecret'),d.stripe.segredoWebhook)
+    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook')+'</code></div>'
+    +'<button class="btn btsec" onclick="testarIntegracao(\'stripe\')">'+_escV(TX('assin.test'))+' Stripe</button>'
+    +'<div class="sect" style="margin-top:16px">Mercado Pago</div>'
+    +_segredoUi('ig-mpAccessToken',TX('assin.accessToken'),d.mercadopago.token)+_segredoUi('ig-mpWebhookSecret',TX('assin.webhookSecret'),d.mercadopago.segredoWebhook)
+    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook-mp')+'</code></div>'
+    +'<button class="btn btsec" onclick="testarIntegracao(\'mercadopago\')">'+_escV(TX('assin.test'))+' Mercado Pago</button>'
+    +'<div class="sect" style="margin-top:16px">Google</div>'
+    +'<div class="pinfo">'+_escV(d.google.ligado?TX('assin.googleOn'):TX('assin.googleOff'))+'</div>'
+    +'<label class="fl" for="ig-googleClientId">Client ID</label><input class="fi" id="ig-googleClientId" value="'+_escV(d.google.clientId||'')+'">'
+    +_segredoUi('ig-googleClientSecret','Client Secret',d.google.segredoDefinido?{definida:true,final:'',origem:'tela'}:null)
+    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.redirectUrl'))+' <code>'+_escV(u+'/api/oauth2-redirect')+'</code></div>'
+    +'<div id="ig-st" class="pinfo" aria-live="polite"></div>'
+    +'<button class="btn btp" onclick="salvarIntegracoes()">'+_escV(TX('assin.saveInteg'))+'</button>';
+}
+async function salvarIntegracoes(){
+  var b={},el=function(i){return document.getElementById(i);};
+  var r=document.querySelector('input[name="integ-prov"]:checked');if(r&&r.value!==_INTEG.provedorAtivo)b.provedorAtivo=r.value;
+  if(el('ig-url').value.trim()!==(_INTEG.urlPublica||''))b.urlPublica=el('ig-url').value.trim();
+  ['stripeSecretKey','stripeWebhookSecret','mpAccessToken','mpWebhookSecret','googleClientSecret'].forEach(function(k){var v=el('ig-'+k).value.trim();if(v)b[k]=v;});
+  if(el('ig-googleClientId').value.trim()!==(_INTEG.google.clientId||''))b.googleClientId=el('ig-googleClientId').value.trim();
+  if(!Object.keys(b).length){showToast(TX('assin.nothing'));return;}
+  try{var d=await _pbV().send('/api/fluxgk/admin/integracoes',{method:'PUT',body:b});
+    showToast(d.aviso||TX('assin.integSaved'),4000);await carregarPlano();carregarIntegracoes();
+  }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
+}
+async function apagarSegredo(id){
+  if(!confirm(TX('assin.confirmClear')))return;
+  var b={};b[id.replace('ig-','')]='';
+  try{await _pbV().send('/api/fluxgk/admin/integracoes',{method:'PUT',body:b});carregarIntegracoes();}catch(e){showToast((e&&e.message)||TX('plano.errGeneric'));}
+}
+async function testarIntegracao(p){
+  var st=document.getElementById('ig-st');st.textContent=TX('assin.testing');
+  try{var r=await _pbV().send('/api/fluxgk/admin/integracoes/testar',{method:'POST',body:{provedor:p}});
+    st.textContent=r.ok?_txa('testOk',{c:r.conta||''}):_txa('testFail',{e:r.erro||''});
+  }catch(e){st.textContent=_txa('testFail',{e:(e&&e.message)||''});}
 }
 async function gerarCortesia(){
   var b={plano:document.getElementById('cg-plano').value,dias:Number(document.getElementById('cg-dias').value||0),motivo:document.getElementById('cg-motivo').value.trim()};

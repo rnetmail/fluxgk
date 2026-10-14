@@ -1,11 +1,10 @@
-/// FluxGK · assinatura: conversa com o serviço de pagamento (Stripe) e trata o webhook (feature 001).
+/// FluxGK · assinatura: despacha para o provedor de pagamento ATIVO (Stripe ou Mercado Pago, RN-P15) e trata o
+/// webhook da Stripe (feature 001). O do Mercado Pago mora em fluxgk_mercadopago.js.
 ///
-/// O app nunca vê dado de cartão: o pagamento acontece na página hospedada do serviço (Checkout), e o app só recebe
-/// a confirmação pelo webhook, conferida pela assinatura HMAC. Variáveis da stack:
-///   STRIPE_SECRET_KEY      chave secreta (sk_test_… em HML, sk_live_… em PRD). Sem ela: rotas de pagamento → 503
-///   STRIPE_WEBHOOK_SECRET  segredo do endpoint do webhook (whsec_…)
-///   FLUXGK_URL_PUBLICA     endereço do app, para as voltas do pagamento
-///   STRIPE_API_URL         só para teste (servidor falso do CI); padrão https://api.stripe.com
+/// O app nunca vê dado de cartão: o pagamento acontece na página hospedada do provedor, e o app só recebe a
+/// confirmação pelo webhook, conferida pela assinatura HMAC. As chaves vêm da tela do Admin (fluxgk_integracoes.js,
+/// cifradas no banco), com as variáveis antigas da stack como reserva. STRIPE_API_URL só existe para o teste
+/// (servidor falso do CI); padrão https://api.stripe.com.
 ///
 /// Meios de pagamento: os que estiverem ligados no painel do serviço (cartão e Pix, D-03). O Checkout não fixa
 /// `payment_method_types`, então ligar ou desligar o Pix é configuração, não código.
@@ -13,14 +12,20 @@
 const TOLERANCIA_S = 300;
 
 function cfg() {
+  const I = require(`${__hooks}/fluxgk_integracoes.js`).ler($app);
   return {
-    chave: String($os.getenv('STRIPE_SECRET_KEY') || '').trim(),
-    segredo: String($os.getenv('STRIPE_WEBHOOK_SECRET') || '').trim(),
-    url: String($os.getenv('FLUXGK_URL_PUBLICA') || '').trim().replace(/\/$/, ''),
+    provedor: I.provedor, chave: I.stripe.chave, segredo: I.stripe.segredo, mpToken: I.mp.token, url: I.url,
     api: String($os.getenv('STRIPE_API_URL') || 'https://api.stripe.com').trim().replace(/\/$/, ''),
   };
 }
-function disponivel() { const c = cfg(); return !!(c.chave && c.url); }
+/** O provedor ativo tem credencial e o app sabe o próprio endereço? */
+function disponivel() {
+  const c = cfg();
+  if (!c.url) return false;
+  if (c.provedor === 'stripe') return !!c.chave;
+  if (c.provedor === 'mercadopago') return !!c.mpToken;
+  return false;
+}
 
 class ErroPagamento extends Error {
   constructor(status, chave, msg) { super(msg); this.status = status; this.chave = chave; }
@@ -59,8 +64,9 @@ function chamar(metodo, caminho, params) {
   return r.json;
 }
 
-/** Sessão de pagamento hospedada. `conta` é o registro logado (ou null: compra antes de ter conta). */
-function checkout(app, plano, ciclo, conta) {
+/** Sessão de pagamento hospedada. `conta` é o registro logado (ou null: compra antes de ter conta).
+ *  `meio` só vale no Mercado Pago: 'cartao' (assinatura) ou 'pix' (um período). */
+function checkout(app, plano, ciclo, conta, meio) {
   const A = require(`${__hooks}/fluxgk_acesso.js`);
   if (!A.PLANOS[plano]) throw new ErroPagamento(400, 'plano_invalido', 'Plano inválido.');
   if (ciclo !== 'mensal' && ciclo !== 'anual') throw new ErroPagamento(400, 'ciclo_invalido', 'Escolha mensal ou anual.');
@@ -68,6 +74,9 @@ function checkout(app, plano, ciclo, conta) {
   let cfgPlano;
   try { cfgPlano = app.findFirstRecordByFilter('planos_config', 'plano = {:p} && ativo = true', { p: plano }); }
   catch (_) { throw new ErroPagamento(503, 'preco_nao_configurado', 'Este plano ainda não tem preço.'); }
+  if (cfg().provedor === 'mercadopago') {
+    return require(`${__hooks}/fluxgk_mercadopago.js`).checkout(app, cfgPlano, plano, ciclo, conta, meio === 'pix' ? 'pix' : 'cartao');
+  }
   const price = cfgPlano.getString(ciclo === 'anual' ? 'priceAnualId' : 'priceMensalId');
   if (!price) throw new ErroPagamento(503, 'preco_nao_configurado', 'Este plano ainda não tem preço.');
   const u = cfg().url;
@@ -90,13 +99,18 @@ function checkout(app, plano, ciclo, conta) {
 }
 
 function portal(conta) {
+  const sub = conta.getString('assinaturaId');
+  /* assinatura do Mercado Pago (id sem o prefixo sub_ da Stripe): o cliente gerencia na conta dele no MP */
+  if (sub && sub.indexOf('sub_') !== 0) return { url: 'https://www.mercadopago.com.br/subscriptions' };
   const cliente = conta.getString('clientePagamentoId');
   if (!cliente) throw new ErroPagamento(404, 'sem_assinatura', 'Esta conta não tem assinatura paga.');
   const s = chamar('POST', '/v1/billing_portal/sessions', { customer: cliente, return_url: cfg().url + '/' });
   return { url: s.url };
 }
 
-/** Cria os preços novos do plano e arquiva os anteriores (quem já assina mantém o preço antigo). */
+/** Grava o preço e cria os objetos de cobrança em cada provedor configurado: na Stripe, Prices novos (os antigos
+ *  são arquivados; quem já assina mantém o preço antigo); no Mercado Pago, planos de assinatura novos para o valor
+ *  que mudou (os antigos ficam como estão, para não mexer em quem já assina). */
 function definirPrecos(app, plano, mensalCentavos, anualCentavos, adminId) {
   const A = require(`${__hooks}/fluxgk_acesso.js`);
   if (!A.PLANOS[plano]) throw new ErroPagamento(400, 'plano_invalido', 'Plano inválido.');
@@ -112,17 +126,60 @@ function definirPrecos(app, plano, mensalCentavos, anualCentavos, adminId) {
       product_data: { name: nome, metadata: { plano: plano } }, metadata: { plano: plano },
     }).id;
   };
-  const antigos = [reg.getString('priceMensalId'), reg.getString('priceAnualId')].filter(Boolean);
-  const pm = (m === reg.getInt('precoMensalCentavos') && reg.getString('priceMensalId')) || novo(m, 'month');
-  const pa = (a === reg.getInt('precoAnualCentavos') && reg.getString('priceAnualId')) || novo(a, 'year');
-  antigos.forEach(function (id) { if (id !== pm && id !== pa) { try { chamar('POST', '/v1/prices/' + id, { active: 'false' }); } catch (_) {} } });
+  const c = cfg();
+  const mudouM = m !== reg.getInt('precoMensalCentavos'), mudouA = a !== reg.getInt('precoAnualCentavos');
+  if (c.chave) {
+    const antigos = [reg.getString('priceMensalId'), reg.getString('priceAnualId')].filter(Boolean);
+    const pm = (!mudouM && reg.getString('priceMensalId')) || novo(m, 'month');
+    const pa = (!mudouA && reg.getString('priceAnualId')) || novo(a, 'year');
+    antigos.forEach(function (id) { if (id !== pm && id !== pa) { try { chamar('POST', '/v1/prices/' + id, { active: 'false' }); } catch (_) {} } });
+    reg.set('priceMensalId', pm); reg.set('priceAnualId', pa);
+  }
+  if (mudouM) reg.set('mpPlanoMensalId', '');
+  if (mudouA) reg.set('mpPlanoAnualId', '');
   reg.set('nomeExibido', nome.replace('FluxGK ', ''));
   reg.set('precoMensalCentavos', m); reg.set('precoAnualCentavos', a);
-  reg.set('priceMensalId', pm); reg.set('priceAnualId', pa);
   reg.set('ativo', true);
   if (adminId) reg.set('atualizadoPor', adminId);
   app.save(reg);
+  if (c.mpToken) require(`${__hooks}/fluxgk_mercadopago.js`).garantirPlanos(app, reg);
   return reg;
+}
+
+/** Depois de trocar o provedor ativo: cria no novo provedor os preços que faltam (D-16). Devolve quantos criou. */
+function sincronizarPrecos(app) {
+  const c = cfg();
+  let n = 0;
+  const regs = app.findRecordsByFilter('planos_config', 'ativo = true', '', 0, 0);
+  regs.forEach(function (reg) {
+    const plano = reg.getString('plano'), nome = 'FluxGK ' + plano.charAt(0).toUpperCase() + plano.slice(1);
+    if (c.provedor === 'stripe' && c.chave) {
+      [['precoMensalCentavos', 'priceMensalId', 'month'], ['precoAnualCentavos', 'priceAnualId', 'year']].forEach(function (x) {
+        if (reg.getInt(x[0]) > 0 && !reg.getString(x[1])) {
+          reg.set(x[1], chamar('POST', '/v1/prices', { currency: 'brl', unit_amount: reg.getInt(x[0]), recurring: { interval: x[2] },
+            product_data: { name: nome, metadata: { plano: plano } }, metadata: { plano: plano } }).id);
+          n++;
+        }
+      });
+      app.save(reg);
+    }
+    if (c.provedor === 'mercadopago' && c.mpToken) {
+      const antes = [reg.getString('mpPlanoMensalId'), reg.getString('mpPlanoAnualId')].filter(Boolean).length;
+      require(`${__hooks}/fluxgk_mercadopago.js`).garantirPlanos(app, reg);
+      n += [reg.getString('mpPlanoMensalId'), reg.getString('mpPlanoAnualId')].filter(Boolean).length - antes;
+    }
+  });
+  return n;
+}
+
+/** Confere as credenciais do provedor (Stripe: saldo; Mercado Pago: dados da conta). */
+function testar(provedor) {
+  if (provedor === 'mercadopago') {
+    const r = require(`${__hooks}/fluxgk_mercadopago.js`).chamar('GET', '/users/me');
+    return { ok: true, conta: String(r.nickname || r.email || r.id || '') };
+  }
+  const r = chamar('GET', '/v1/balance');
+  return { ok: true, conta: r.livemode ? 'produção' : 'teste' };
 }
 
 /* --------------------------------------- webhook --------------------------------------- */
@@ -276,6 +333,6 @@ function webhook(app, cabecalho, corpo) {
 
 module.exports = {
   cfg: cfg, disponivel: disponivel, ErroPagamento: ErroPagamento, form: form, chamar: chamar,
-  checkout: checkout, portal: portal, definirPrecos: definirPrecos,
+  checkout: checkout, portal: portal, definirPrecos: definirPrecos, sincronizarPrecos: sincronizarPrecos, testar: testar,
   assinaturaValida: assinaturaValida, tratarEvento: tratarEvento, webhook: webhook,
 };

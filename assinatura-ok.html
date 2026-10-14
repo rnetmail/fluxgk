@@ -43,7 +43,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offs
 <script>
 var I=window.FluxGKI18n, T=function(k){return I.t(k);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-var card=document.getElementById('card'), s=new URLSearchParams(location.search).get('s')||'', inicio=Date.now();
+var qs=new URLSearchParams(location.search);
+/* Stripe e Pix do Mercado Pago voltam com ?s=…; a assinatura no cartão do Mercado Pago volta com ?preapproval_id=… */
+var card=document.getElementById('card'), s=qs.get('s')||(qs.get('preapproval_id')?'mpa_'+qs.get('preapproval_id'):''), inicio=Date.now();
+function token(){try{var a=JSON.parse(localStorage.getItem('pocketbase_auth')||'null');return a&&a.token||'';}catch(e){return '';}}
 document.documentElement.lang=I.getLang()==='pt'?'pt-BR':'en';
 I.apply();
 function msg(titulo,texto){
@@ -54,9 +57,18 @@ function pronto(j){
     +'<div class="rot">'+esc(T('ok.code'))+'</div>'
     +'<div class="cod" id="cod">'+esc(j.codigo)+'</div>'
     +'<button class="btn sec" id="copiar">'+esc(T('ok.copy'))+'</button><div class="st" id="st"></div>'
+    +(token()?'<button class="btn" id="ativar">'+esc(T('ok.activateHere'))+'</button>':'')
     +'<p>'+esc(T('ok.next'))+'</p>'
     +'<p>'+esc(T('ok.keep'))+'</p>'
     +'<a class="btn" href="/">'+esc(T('ok.go'))+'</a>';
+  var at=document.getElementById('ativar');
+  if(at)at.onclick=function(){
+    at.disabled=true;
+    fetch('/api/fluxgk/ativar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:token()},body:JSON.stringify({codigo:j.codigo})})
+      .then(function(r){return r.json().then(function(x){if(!r.ok)throw x;return x;});})
+      .then(function(){msg(T('ok.title'),T('ok.applied'));})
+      .catch(function(e){at.disabled=false;document.getElementById('st').textContent=(e&&e.message)||'';});
+  };
   document.getElementById('copiar').onclick=function(){
     var el=document.getElementById('cod'),st=document.getElementById('st'),t=el.textContent.trim();
     var ok=function(){st.textContent=T('ok.copied');};

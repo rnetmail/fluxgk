@@ -34,6 +34,7 @@ h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
 .pm{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
 ul{margin:0;padding-left:18px;color:#d4d4d4;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1}
 .assinar{width:100%;padding:12px;border:0;border-radius:9px;background:var(--paper);color:var(--ink);font:700 14px inherit;font-family:inherit;cursor:pointer}
+.assinar.pix{background:transparent;color:var(--paper);border:1px solid #555}
 .assinar:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .nota{color:var(--mute);font-size:13px;margin-top:22px;max-width:70ch}
@@ -65,7 +66,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offs
 <script src="fluxgk-i18n.js"></script>
 <script>
 var I=window.FluxGKI18n, T=function(k){return I.t(k);};
-var EST={planos:[],disponivel:false,ciclo:'mensal'};
+var EST={planos:[],disponivel:false,ciclo:'mensal',meios:['automatico']};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function moeda(c){try{return (c/100).toLocaleString(I.getLang()==='pt'?'pt-BR':'en-GB',{style:'currency',currency:'BRL'});}catch(e){return 'R$ '+(c/100).toFixed(2);}}
 function nomeMod(k){return k==='inteligencia'?T('pg.intel'):T('hub.mod.'+k);}
@@ -79,7 +80,10 @@ function desenha(){
       +'<div class="pp">'+(tem?esc(moeda(c))+'<small>'+esc(T(EST.ciclo==='anual'?'pg.perYear':'pg.perMonth'))+'</small>':'<small>'+esc(T('pg.priceSoon'))+'</small>')+'</div>'
       +'<div class="pm">'+esc(T('pg.modules').split('{n}').join(nove))+'</div>'
       +'<ul>'+p.modulos.map(function(m){return '<li>'+esc(nomeMod(m))+'</li>';}).join('')+'</ul>'
-      +'<button class="assinar" '+(EST.disponivel&&tem?'':'disabled ')+'onclick="assinar(\''+p.plano+'\',this)">'+esc(T('pg.choose'))+'</button>'
+      +EST.meios.map(function(m){
+        var rot=m==='cartao'?T('pg.payCard'):m==='pix'?T(EST.ciclo==='anual'?'pg.payPixYear':'pg.payPixMonth'):T('pg.choose');
+        return '<button class="assinar'+(m==='pix'?' pix':'')+'" '+(EST.disponivel&&tem?'':'disabled ')+'onclick="assinar(\''+p.plano+'\',this,\''+m+'\')">'+esc(rot)+'</button>';
+      }).join('')
       +'</div>';
   }).join('');
   if(!EST.disponivel)document.getElementById('erro').textContent=T('pg.unavailable');
@@ -88,16 +92,16 @@ function trocaCiclo(c){EST.ciclo=c;document.getElementById('c-mensal').setAttrib
 function trocaLang(l){I.setLang(l,true);marcaLang();desenha();}
 function marcaLang(){['pt','en'].forEach(function(l){var b=document.getElementById('lang-'+l);if(b)b.setAttribute('aria-pressed',I.getLang()===l);});document.documentElement.lang=I.getLang()==='pt'?'pt-BR':'en';}
 function token(){try{var a=JSON.parse(localStorage.getItem('pocketbase_auth')||'null');return a&&a.token||'';}catch(e){return '';}}
-function assinar(plano,bt){
+function assinar(plano,bt,meio){
   bt.disabled=true;document.getElementById('erro').textContent='';
   var h={'Content-Type':'application/json'},t=token();if(t)h.Authorization=t;   /* logado: o plano entra direto na conta */
-  fetch('/api/fluxgk/checkout',{method:'POST',headers:h,body:JSON.stringify({plano:plano,ciclo:EST.ciclo})})
+  fetch('/api/fluxgk/checkout',{method:'POST',headers:h,body:JSON.stringify({plano:plano,ciclo:EST.ciclo,meio:meio==='automatico'?'':meio})})
     .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j;});})
     .then(function(j){location.href=j.url;})
     .catch(function(e){bt.disabled=false;document.getElementById('erro').textContent=(e&&e.message)||T('pg.err');});
 }
 I.apply();marcaLang();
-fetch('/api/fluxgk/planos').then(function(r){return r.json();}).then(function(j){EST.planos=j.planos||[];EST.disponivel=!!j.pagamentoDisponivel;desenha();})
+fetch('/api/fluxgk/planos').then(function(r){return r.json();}).then(function(j){EST.planos=j.planos||[];EST.disponivel=!!j.pagamentoDisponivel;EST.meios=(j.meios&&j.meios.length)?j.meios:['automatico'];desenha();})
   .catch(function(){document.getElementById('erro').textContent=T('pg.err');});
 </script>
 </body>
