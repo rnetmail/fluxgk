@@ -59,8 +59,12 @@ confere "$(entra comum@ci.local)" "entrou" "conta antiga entra com a mesma senha
 confere "$(cadastra novo@ci.local)" "400" "versão nova: cadastro anônimo recusado"
 confere "$(curl -s "http://$P/api/collections/users/auth-methods" | J 'j.oauth2.enabled && j.oauth2.providers.some(p=>p.name==="google")')" "true" "login Google ligado pelas variáveis"
 
-# 3 · volta de versão
-echo y | docker exec -i "$C" pocketbase migrate down 1 --dir=/pb/pb_data --migrationsDir=/pb/pb_migrations --hooksDir=/pb/pb_hooks >/dev/null
+# 3 · volta de versão: desfaz TODAS as migrations que a imagem nova tem e a antiga não
+lista() { docker run --rm --entrypoint ls "$1" /pb/pb_migrations | sort; }
+NDESFAZ=$(comm -23 "$(lista "$NOVA" > /tmp/mig-nova.$$; echo /tmp/mig-nova.$$)" "$(lista "$ANTIGA" > /tmp/mig-antiga.$$; echo /tmp/mig-antiga.$$)" | wc -l)
+rm -f /tmp/mig-nova.$$ /tmp/mig-antiga.$$
+echo "(volta: desfazendo $NDESFAZ migration(s))"
+echo y | docker exec -i "$C" pocketbase migrate down "$NDESFAZ" --dir=/pb/pb_data --migrationsDir=/pb/pb_migrations --hooksDir=/pb/pb_hooks >/dev/null
 sobe "$ANTIGA"
 confere "$(cadastra volta@ci.local)" "200" "volta: cadastro aberto de novo"
 confere "$(curl -s "http://$P/api/collections/codigos_ativacao/records" | J 'j.status')" "404" "volta: coleções novas removidas"

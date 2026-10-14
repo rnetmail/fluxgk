@@ -10,6 +10,9 @@
 ///   GET   /api/fluxgk/admin/codigos?estado=livre|usado
 ///   PUT   /api/fluxgk/admin/precos/{plano}               {mensalCentavos, anualCentavos}
 ///   GET   /api/fluxgk/admin/eventos?conta=&tipo=
+///   GET   /api/fluxgk/admin/integracoes                  provedor ativo, chaves (só "definida · final"), Google
+///   PUT   /api/fluxgk/admin/integracoes                  {provedorAtivo?, urlPublica?, stripeSecretKey?, …, googleClientId?, googleClientSecret?}
+///   POST  /api/fluxgk/admin/integracoes/testar           {provedor} → confere as credenciais no provedor
 ///   POST  /api/fluxgk/apagar-subarvore                   (técnico) {path}: clube/temporada inteiros, ver fluxgk_subarvore.js
 
 
@@ -150,4 +153,43 @@ routerAdd('POST', '/api/fluxgk/apagar-subarvore', (e) => {
     if (String(err && err.message).indexOf('caminho_invalido') >= 0) return e.json(400, { message: 'Caminho inválido.' });
     throw err;
   }
+});
+
+routerAdd('GET', '/api/fluxgk/admin/integracoes', (e) => {
+  const R = require(`${__hooks}/fluxgk_rotas.js`);
+  if (!R.adm(e)) return e.json(403, { message: 'Só administradores.' });
+  return e.json(200, require(`${__hooks}/fluxgk_integracoes.js`).resumo($app));
+});
+
+routerAdd('PUT', '/api/fluxgk/admin/integracoes', (e) => {
+  const R = require(`${__hooks}/fluxgk_rotas.js`);
+  if (!R.adm(e)) return e.json(403, { message: 'Só administradores.' });
+  const I = require(`${__hooks}/fluxgk_integracoes.js`);
+  const P = require(`${__hooks}/fluxgk_assinatura.js`);
+  const b = e.requestInfo().body || {};
+  let mudou;
+  try { mudou = I.gravar($app, b, R.quemId(e)); }
+  catch (err) {
+    const m = String(err && err.message);
+    if (m.indexOf('provedor_invalido') >= 0) return e.json(400, { message: 'Provedor inválido.' });
+    if (m.indexOf('url_invalida') >= 0) return e.json(400, { message: 'Endereço público inválido.' });
+    throw err;
+  }
+  /* nunca registra valor de chave no histórico: só o que mudou */
+  R.registra(e, 'admin.integracoes', mudou.join(', ') || 'nada');
+  let criados = 0, aviso = '';
+  if (b.provedorAtivo) {
+    try { criados = P.sincronizarPrecos($app); } catch (err) { aviso = 'Os preços ainda não foram criados no provedor: ' + (err && err.message); }
+  }
+  return e.json(200, Object.assign(I.resumo($app), { precosCriados: criados, aviso: aviso }));
+});
+
+routerAdd('POST', '/api/fluxgk/admin/integracoes/testar', (e) => {
+  const R = require(`${__hooks}/fluxgk_rotas.js`);
+  if (!R.adm(e)) return e.json(403, { message: 'Só administradores.' });
+  const P = require(`${__hooks}/fluxgk_assinatura.js`);
+  const b = e.requestInfo().body || {};
+  const prov = b.provedor === 'mercadopago' ? 'mercadopago' : 'stripe';
+  try { return e.json(200, P.testar(prov)); }
+  catch (err) { return e.json(200, { ok: false, erro: (err && err.message) || 'falhou' }); }
 });
