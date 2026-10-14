@@ -64,4 +64,13 @@ function gravarResposta(link, data, resposta) {
   return valor;
 }
 
-module.exports = { acharLink: acharLink, hoje: hoje, validar: validar, lerResposta: lerResposta, gravarResposta: gravarResposta };
+/** O técnico dono do link tem o Load Control liberado e dentro do prazo? (feature 001, D-13: a rota grava pelo
+ *  servidor, por fora das regras de `nodes`, então o plano é conferido aqui.) */
+function donoAtivo(link) {
+  try {
+    const A = require(`${__hooks}/fluxgk_acesso.js`);
+    return A.liberado($app.findRecordById('users', link.getString('owner')), 'data');
+  } catch (_) { return false; }
+}
+
+module.exports = { donoAtivo: donoAtivo, acharLink: acharLink, hoje: hoje, validar: validar, lerResposta: lerResposta, gravarResposta: gravarResposta };

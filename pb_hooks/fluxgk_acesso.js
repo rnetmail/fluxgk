@@ -98,7 +98,28 @@ function ehAdmin(e) {
   return !!email && admins().indexOf(email) >= 0;
 }
 
+/** Data no formato que o PocketBase grava ('AAAA-MM-DD HH:MM:SS.sssZ'). */
+function dataPb(ms) { return new Date(ms).toISOString().replace('T', ' '); }
+
+/** Grava o plano na conta (só o servidor chama). `ate` em ms, ou SEM_VENCIMENTO. Não salva: quem chama salva. */
+function aplicarPlano(conta, plano, ate, origem, extra) {
+  conta.set('plano', plano);
+  conta.set('modulos', modulosDoPlano(plano));
+  conta.set('acessoAte', ate === SEM_VENCIMENTO ? SEM_VENCIMENTO : dataPb(ate));
+  conta.set('origemPlano', origem);
+  if (extra && extra.assinaturaId) conta.set('assinaturaId', extra.assinaturaId);
+  if (extra && extra.clientePagamentoId) conta.set('clientePagamentoId', extra.clientePagamentoId);
+}
+
+/** Estende o acesso só para frente (eventos de renovação podem chegar fora de ordem). */
+function estenderAte(conta, ateMs) {
+  const atual = conta.getDateTime('acessoAte');
+  const atualMs = (!atual || atual.isZero()) ? 0 : atual.unix() * 1000;
+  if (ateMs > atualMs) conta.set('acessoAte', dataPb(ateMs));
+}
+
 module.exports = {
+  dataPb: dataPb, aplicarPlano: aplicarPlano, estenderAte: estenderAte,
   MODULOS: MODULOS, PLANOS: PLANOS, PREFIXOS: PREFIXOS, SEM_VENCIMENTO: SEM_VENCIMENTO, CAMPOS_PROTEGIDOS: CAMPOS_PROTEGIDOS,
   modulosDoPlano: modulosDoPlano, regraNodes: regraNodes, semCamposProtegidos: semCamposProtegidos,
   liberado: liberado, acessoValido: acessoValido, admins: admins, ehAdmin: ehAdmin,

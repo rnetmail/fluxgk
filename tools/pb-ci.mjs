@@ -35,7 +35,8 @@ export function cliente(url) {
       plano: 'pro', modulos: MODULOS_PRO, acessoAte: SEM_VENCIMENTO, origemPlano: 'legado', role: 'tecnico',
       ...(campos || {}),
     });
-    if (c.s !== 200) throw new Error('conta não criada: ' + c.s + ' ' + JSON.stringify(c.j));
+    const jaExiste = c.s === 400 && c.j && c.j.data && c.j.data.email && c.j.data.email.code === 'validation_not_unique';
+    if (c.s !== 200 && !jaExiste) throw new Error('conta não criada: ' + c.s + ' ' + JSON.stringify(c.j));
     const r = await req('POST', '/api/collections/users/auth-with-password', null, { identity: email, password: senha });
     if (r.s !== 200) throw new Error('conta não entrou: ' + r.s + ' ' + JSON.stringify(r.j));
     return { t: r.j.token, id: r.j.record.id, email, senha };
