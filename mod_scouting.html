@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FluxGK · Scouting</title>
 <script src="fluxgk-i18n.js"></script>
+<script src="/static/fluxgk-ditado.js"></script>
 <link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
 :root{
@@ -637,7 +638,7 @@ function telaFicha(){
     <datalist id="dlLigas2">${opcoes('liga').map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
     <datalist id="dlTags">${opcoes('etiqueta').map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
     <label class="f" style="margin-top:12px"><span>Links de vídeo (um por linha, título | url)</span>
-      <textarea data-c="links" placeholder="Compacto 2026 | https://...">${esc((g.links||[]).map(l=>l.titulo+' | '+l.url).join('\n'))}</textarea></label>
+      <textarea data-c="links" data-ditado="nao" placeholder="Compacto 2026 | https://...">${esc((g.links||[]).map(l=>l.titulo+' | '+l.url).join('\n'))}</textarea></label>
     ${(g.links||[]).length?`<div class="tags" style="margin-top:8px">${(g.links||[]).map(l=>`<a class="tag" href="${esc(l.url)}" target="_blank" rel="noopener">▶ ${esc(l.titulo||'vídeo')}</a>`).join('')}</div>`:''}
   </div>
 
@@ -733,11 +734,11 @@ function telaAjustes(){
   <div class="card mb14">
     <h2>Listas</h2>
     <label class="f mb14"><span>Ligas (uma por linha)</span>
-      <textarea id="cfgLigas">${esc((DB.config.ligas||[]).join('\n'))}</textarea></label>
+      <textarea id="cfgLigas" data-ditado="nao">${esc((DB.config.ligas||[]).join('\n'))}</textarea></label>
     <label class="f mb14"><span>Etiquetas de perfil (uma por linha)</span>
-      <textarea id="cfgTags">${esc((DB.config.etiquetas||[]).join('\n'))}</textarea></label>
+      <textarea id="cfgTags" data-ditado="nao">${esc((DB.config.etiquetas||[]).join('\n'))}</textarea></label>
     <label class="f mb14"><span>Países (uma por linha)</span>
-      <textarea id="cfgPaises">${esc((DB.config.paises||[]).join('\n'))}</textarea></label>
+      <textarea id="cfgPaises" data-ditado="nao">${esc((DB.config.paises||[]).join('\n'))}</textarea></label>
     <button class="btn p" id="cfgSalvar">Salvar listas</button>
   </div>
   <div class="card">

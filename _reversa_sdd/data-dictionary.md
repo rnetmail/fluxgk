@@ -111,11 +111,19 @@ cada prefixo de caminho de módulo (`pb_hooks/fluxgk_acesso.js#PREFIXOS`), o mó
 | `tatica` | objeto | cena do tatica3d |
 
 ### Jogo de estatística (stats)
-`{id, date, opponent, competition, gk, season ('AAAA-AA'), homeAway ('home'|'away'), venue, gf, ga, outcome, shots[], offActions[]}`.
-Chute: campos do formulário `SF` + `minute` + `gk` (🟡 estrutura completa a detalhar no Detective).
+`{id, date, opponent, competition, gk, season ('AAAA-AA'), homeAway ('home'|'away'), venue, gf, ga, outcome, shots[], offActions[], notas[]}`.
+Chute: campos do formulário `SF` + `minute` + `gk` + `obs?` (🟡 estrutura completa a detalhar no Detective). Ação ofensiva: `OA` + `minute` + `gk` + `obs?`.
+
+### Ditado por voz: observação e notas do jogo (feature 002, desde 14/10/2026)
+Campos opcionais dentro dos documentos de jogo, sem migração: dado antigo sem eles abre igual. 🟢
+| Campo | Onde | Formato |
+|---|---|---|
+| `obs` | lance do xG (`xg/games.<id>.shots[]`), chute e ação ofensiva da Estatística | texto livre; ausente quando vazio |
+| `notas[]` | jogo de xG, de Estatística e de Minutagem | `{min: número \| null, texto, em: epoch ms}`; exibidas e impressas em ordem de `min` |
+Só o texto é guardado: o áudio vai do navegador ao serviço de voz do próprio navegador e não passa pelo FluxGK (RN-V03).
 
 ### Jogo de minutagem (minutes)
-`{id, date, opp, comp, season, totalMin, halfMin, hasOT, etMin, gkData}`;
+`{id, date, opp, comp, season, totalMin, halfMin, hasOT, etMin, gkData, notas[]}`;
 `gkData[<nome>] = {selected, h1Ivs[], h2Ivs[], e1Ivs[], e2Ivs[], h1Secs, h2Secs, e1Secs, e2Secs, totalSecs}`; intervalo `{entry, exit}`.
 
 ### Registro de carga (data)

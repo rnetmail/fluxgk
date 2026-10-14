@@ -520,6 +520,9 @@
     /* calibracao */
     'xg.calib':'⚙ xG Calibration','xg.conservative':'Conservative','xg.futsal':'Futsal','xg.aggressive':'Aggressive',
     'xg.baseMax':'Base max.','xg.distance':'Distance','xg.angle':'Angle',
+    /* ditado por voz (feature 002) */
+    'dit.notas':'Match notes','dit.obsLances':'Notes per play','dit.obsLance':'Shot note','dit.obsLancePh':'What happened in this shot (speak or type)',
+    'dit.obsAcao':'Action note','dit.obsAcaoPh':'What happened in this action (speak or type)','dit.obs':'Note',
     'xg.registerShot':'+ Register shot','xg.total':'Total','xg.goals':'Goals','xg.conv':'Conv.',
     /* partida */
     'xg.matchSettings':'Match settings','xg.match':'Match','xg.date':'Date',
@@ -1595,6 +1598,9 @@
     /* calibracao */
     'xg.calib':'⚙ Calibração xG','xg.conservative':'Conservador','xg.futsal':'Futsal','xg.aggressive':'Agressivo',
     'xg.baseMax':'Base máx.','xg.distance':'Distância','xg.angle':'Ângulo',
+    /* ditado por voz (feature 002) */
+    'dit.notas':'Notas do jogo','dit.obsLances':'Observações dos lances','dit.obsLance':'Observação do lance','dit.obsLancePh':'O que aconteceu nesta finalização (fale ou digite)',
+    'dit.obsAcao':'Observação da ação','dit.obsAcaoPh':'O que aconteceu nesta ação (fale ou digite)','dit.obs':'Observação',
     'xg.registerShot':'+ Registrar finalização','xg.total':'Total','xg.goals':'Gols','xg.conv':'Conv.',
     /* partida */
     'xg.matchSettings':'Configurações da partida','xg.match':'Partida','xg.date':'Data',

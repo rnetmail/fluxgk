@@ -271,6 +271,7 @@ footer{border-top:1px solid var(--border);background:var(--bg);padding:9px 14px;
 button:focus-visible,.tog:focus-visible,.sdel:focus-visible,[role="button"]:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #E8901A;outline-offset:2px}
 </style>
 <script src="fluxgk-i18n.js"></script>
+<script src="/static/fluxgk-ditado.js"></script>
 </head>
 <body>
 <div id="app">
@@ -422,7 +423,12 @@ button:focus-visible,.tog:focus-visible,.sdel:focus-visible,[role="button"]:focu
           </div>
         </div>
       </div>
+      <div class="form-group">
+        <div data-i18n="dit.obsLance" class="form-label">Shot note</div>
+        <textarea id="shotObs" rows="2" class="form-select" style="width:100%;resize:vertical;min-height:44px;font-family:inherit" data-i18n-placeholder="dit.obsLancePh" placeholder="What happened in this shot (speak or type)"></textarea>
+      </div>
       <button data-i18n="xg.registerShot" class="reg-btn alfa-team" id="regBtn" onclick="registrar()" disabled>+ Register shot</button>
+      <div id="xgNotas" style="margin-top:4px"></div>
     </div>
   </div>
 </main>
@@ -527,7 +533,7 @@ try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:'FL
 const S={
   teamA:{name:'',emb:null}, teamB:{name:'',emb:null},   /* vazio: rotulo traduzido so na exibicao */
   comp:'',date:'',cur:'alfa',alfaLeft:true,
-  shots:[],pending:null,_editIdx:null,_editingGameId:null,
+  shots:[],notas:[],pending:null,_editIdx:null,_editingGameId:null,
   assist:false,pressao:false,gol:false,gkPres:true,defenders:0,
   calibOpen:false,CFG:{base:0.85,dist:1.2,ang:0.6}
 };
@@ -575,7 +581,7 @@ function swapSides(){S.alfaLeft=!S.alfaLeft;const lT=S.alfaLeft?'alfa':'beta',rT
 function toggle(id){if(id==='assist')S.assist=true;if(id==='noassist')S.assist=false;if(id==='press')S.pressao=true;if(id==='nopress')S.pressao=false;if(id==='gol')S.gol=true;if(id==='nogol')S.gol=false;if(id==='gkpres')S.gkPres=true;if(id==='gkoff')S.gkPres=false;S.defenders=parseInt(document.getElementById('defenders')?.value||0);updTogg();calcXG();}
 function updTogg(){const t=S.cur;[['assist',S.assist,'on-'+t],['noassist',!S.assist,'on-off'],['press',S.pressao,'on-'+t],['nopress',!S.pressao,'on-off'],['gol',S.gol,'on-gol'],['nogol',!S.gol,'on-off'],['gkpres',S.gkPres,'on-off'],['gkoff',!S.gkPres,'on-'+S.cur]].forEach(([id,on,cls])=>{const el=document.getElementById('tog-'+id);if(el)el.className='tog'+(on?' '+cls:'');});}
 
-function registrar(){if(!S.pending)return;const xg=computeXG(S.pending.nx,S.pending.ny,S.cur),min=parseInt(document.getElementById('minuto').value)||0;S.shots.push({team:S.cur,nx:S.pending.nx,ny:S.pending.ny,atkDir:atkDir(S.cur),corpo:document.getElementById('corpo').value,tipo:document.getElementById('tipo').value,assist:S.assist,pressao:S.pressao,gol:S.gol,gkPres:S.gkPres,defenders:S.defenders,xg,min});S.pending=null;document.getElementById('posHint').style.display='none';document.getElementById('regBtn').disabled=true;document.getElementById('xgNum').textContent='—';document.getElementById('xgNum').style.color='';document.getElementById('xgBar').style.width='0%';document.getElementById('minuto').value=Math.min((parseInt(document.getElementById('minuto').value)||0)+1,40);updStats();draw();toast(TX('xg.msg.shotRegistered'));}
+function registrar(){if(!S.pending)return;const xg=computeXG(S.pending.nx,S.pending.ny,S.cur),min=parseInt(document.getElementById('minuto').value)||0;S.shots.push({team:S.cur,nx:S.pending.nx,ny:S.pending.ny,atkDir:atkDir(S.cur),corpo:document.getElementById('corpo').value,tipo:document.getElementById('tipo').value,assist:S.assist,pressao:S.pressao,gol:S.gol,gkPres:S.gkPres,defenders:S.defenders,xg,min,..._xgObsLer()});S.pending=null;document.getElementById('posHint').style.display='none';document.getElementById('regBtn').disabled=true;document.getElementById('xgNum').textContent='—';document.getElementById('xgNum').style.color='';document.getElementById('xgBar').style.width='0%';document.getElementById('minuto').value=Math.min((parseInt(document.getElementById('minuto').value)||0)+1,40);updStats();draw();toast(TX('xg.msg.shotRegistered'));}
 function delShot(i){S.shots.splice(i,1);updStats();draw();renderLog();}
 function updStats(){const t=S.shots.length,g=S.shots.filter(s=>s.gol).length,x=S.shots.reduce((a,s)=>a+s.xg,0);document.getElementById('st-total').textContent=t;document.getElementById('st-gols').textContent=g;document.getElementById('st-xg').textContent=x.toFixed(2);document.getElementById('st-conv').textContent=t>0?Math.round(g/t*100)+'%':'0%';}
 
@@ -640,7 +646,7 @@ function renderLog(){
     var ebg=editing?'var(--alfa)':'none';
     var ebc=editing?'var(--alfa)':'var(--border2)';
     var ec=editing?'#fff':'var(--text3)';
-    var html='<div class="shot-item" style="background:'+bg+'">';
+    var html='<div class="shot-item" style="background:'+bg+';flex-wrap:wrap">';
     html+='<div class="sdot" style="background:'+(sh.gol?'#EF4444':col)+';"></div>';
     html+='<div class="steam" style="color:'+col+';">'+nm+'</div>';
     html+='<div class="smin">'+sh.min+"'</div>";
@@ -649,6 +655,7 @@ function renderLog(){
     html+='<span class="stag">'+(corpoL(sh.corpo)||sh.corpo)+'</span>';
     if(sh.gol)html+='<span class="stag gol">⚽ Goal</span>';
     html+='</div>';
+    if(sh.obs)html+='<div class="sobs" style="flex-basis:100%;order:9;font-size:12px;color:var(--text2);padding:2px 0 0 18px;overflow-wrap:anywhere;">'+_xgEsc(sh.obs)+'</div>';
     html+='<button title="Edit shot" data-i18n-title="xg.editShot" onclick="editShot('+i+')" style="width:22px;height:22px;border-radius:50%;background:'+ebg+';border:1px solid '+ebc+';color:'+ec+';cursor:pointer;font-size:11px;flex-shrink:0;">✏</button>';
     html+='<button class="sdel" onclick="delShot('+i+')" aria-label="Delete shot" data-i18n-aria-label="xg.deleteShot">&#10005;</button>';
     html+='</div>';
@@ -811,7 +818,28 @@ function buildPDF(){
       +'</div>';
     _rep.appendChild(_div);
   }
+  var _nt=_xgRelatorio(S.notas,s);
+  if(_nt){var _dn=document.createElement('div');_dn.className='pdf-page';_dn.innerHTML=_nt;_rep.appendChild(_dn);}
 }
+
+/* ── DITADO (feature 002): observação do lance e notas do jogo ── */
+function _xgEsc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function _xgObsLer(){var el=document.getElementById('shotObs');var v=el?el.value.trim():'';if(el)el.value='';return v?{obs:v}:{};}
+function _xgRelatorio(notas,shots){
+  if(!window.FluxGKDitado)return '';
+  var obs=(shots||[]).map(function(sh,i){return{rotulo:'#'+(i+1)+(sh.min!=null?' '+sh.min+"'":''),texto:sh.obs};});
+  return FluxGKDitado.htmlRelatorio(notas,obs,{notas:TX('dit.notas'),obs:TX('dit.obsLances')});
+}
+var _xgNotasUI=null;
+function _xgNotasDesenhar(){
+  var el=document.getElementById('xgNotas');if(!el||!window.FluxGKDitado)return;
+  if(!_xgNotasUI)_xgNotasUI=FluxGKDitado.notasDoJogo(el,{titulo:TX('dit.notas'),
+    notas:function(){return S.notas;},
+    minuto:function(){return parseInt(document.getElementById('minuto').value)||0;},
+    salvar:function(n){S.notas=n;}});
+  else _xgNotasUI.desenhar();
+}
+window.addEventListener('load',_xgNotasDesenhar);
 
 function openOv(id){document.getElementById(id).classList.add('open');}
 function closeOv(id){document.getElementById(id).classList.remove('open');}
@@ -976,7 +1004,7 @@ function navTab(tab){
 function saveCurrentGame(){
   if(!S.shots.length){toast(TX('xg.msg.noShots'));return;}
   DB.saveGame({id:Date.now().toString(),teamA:S.teamA.name,teamB:S.teamB.name,
-    comp:S.comp,date:S.date||new Date().toISOString().split('T')[0],shots:S.shots});
+    comp:S.comp,date:S.date||new Date().toISOString().split('T')[0],shots:S.shots,notas:S.notas.slice()});
   toast(TX('xg.msg.matchSaved'));renderHist();
 }
 
@@ -1086,7 +1114,7 @@ function exportCheckedPDF(){
   if(!games.length){toast(TX('xg.msg.noMatchesFound'));return;}
   if(games.length===1){
     var g=games[0];
-    S.shots=g.shots.map(function(s){return Object.assign({},s);});
+    S.shots=g.shots.map(function(s){return Object.assign({},s);});S.notas=(g.notas||[]).slice();
     S.teamA.name=g.teamA;S.teamB.name=g.teamB;S.comp=g.comp||'';S.date=g.date||'';
     syncMatch();updStats();draw();
     setTimeout(function(){exportPDF();},200);
@@ -1205,7 +1233,7 @@ function renderCourtSVGwithBG(shotGroups,bgImg,W,H){
 function loadGameToEdit(id){
   const g=DB.games().find(x=>x.id===id);if(!g)return;
   if(S.shots.length>0&&!confirm(TX('xg.msg.loadConfirm')))return;
-  S.shots=g.shots.map(s=>Object.assign({},s));
+  S.shots=g.shots.map(s=>Object.assign({},s));S.notas=(g.notas||[]).slice();_xgNotasDesenhar();
   S.teamA.name=g.teamA;S.teamB.name=g.teamB;S.comp=g.comp||'';S.date=g.date||'';
   S._editingGameId=id;
   document.getElementById('hTeamA').textContent=g.teamA;
@@ -1231,7 +1259,7 @@ function showEditBanner(id){
 function saveEditedGame(){
   if(!S._editingGameId)return;
   const g=DB.games().find(x=>x.id===S._editingGameId);if(!g)return;
-  g.shots=S.shots.map(s=>Object.assign({},s));
+  g.shots=S.shots.map(s=>Object.assign({},s));g.notas=S.notas.slice();
   g.teamA=S.teamA.name;g.teamB=S.teamB.name;g.comp=S.comp;g.date=S.date;
   DB.saveGame(g);cancelEditGame();toast(TX('xg.msg.changesSaved'));
 }
@@ -1239,7 +1267,7 @@ function saveEditedGame(){
 function cancelEditGame(){
   S._editingGameId=null;
   const b=document.getElementById('edit-banner');if(b)b.remove();
-  S.shots=[];S.pending=null;updStats();draw();
+  S.shots=[];S.notas=[];_xgNotasDesenhar();S.pending=null;updStats();draw();
 }
 
 /* ════════ CLUBES ════════ */
@@ -1613,6 +1641,7 @@ function editShot(i){
   document.getElementById('minuto').value=sh.min;
   document.getElementById('corpo').value=sh.corpo;
   document.getElementById('tipo').value=sh.tipo;
+  var ob=document.getElementById('shotObs');if(ob)ob.value=sh.obs||'';
   S.assist=sh.assist;S.pressao=sh.pressao;S.gol=sh.gol;
   S.gkPres=(sh.gkPres!==undefined)?sh.gkPres:true;
   S.defenders=sh.defenders||0;
@@ -1639,10 +1668,12 @@ function updateShot(){
     assist:S.assist,pressao:S.pressao,gol:S.gol,
     gkPres:S.gkPres,defenders:S.defenders,xg:xg,
     min:parseInt(document.getElementById('minuto').value)||0});
+  delete S.shots[i].obs; Object.assign(S.shots[i],_xgObsLer());
   cancelEdit();updStats();draw();toast(TX('xg.msg.shotUpdated'));
 }
 function cancelEdit(){
   S._editIdx=null;S.pending=null;
+  var ob=document.getElementById('shotObs');if(ob)ob.value='';
   var btn=document.getElementById('regBtn');
   if(btn){btn.textContent=TX('xg.registerShot');btn.onclick=registrar;btn.disabled=true;btn.style.background='';}
   var hint=document.getElementById('shot-hint');
@@ -1872,7 +1903,7 @@ function buildGameHTML(g, gameColor, showPageBreak, courtImg){
         +'</div>';
     }
   }
-  return pages;
+  return pages+_xgRelatorio(g.notas,g.shots);
 }
 
 function exportFilteredPDF(){
@@ -1883,7 +1914,7 @@ function exportFilteredPDF(){
   if(!games.length){toast(TX('xg.msg.noExport'));return;}
   if(games.length===1){
     var g=games[0];
-    S.shots=g.shots.map(function(s){return Object.assign({},s);});
+    S.shots=g.shots.map(function(s){return Object.assign({},s);});S.notas=(g.notas||[]).slice();
     S.teamA.name=g.teamA;S.teamB.name=g.teamB;S.comp=g.comp||'';S.date=g.date||'';
     syncMatch();updStats();draw();
     setTimeout(function(){exportPDF();},200);
@@ -1914,7 +1945,7 @@ function exportIndividualPDFs(games){
   function next(){
     if(idx>=games.length)return;
     var g=games[idx++];
-    S.shots=g.shots.map(function(s){return Object.assign({},s);});
+    S.shots=g.shots.map(function(s){return Object.assign({},s);});S.notas=(g.notas||[]).slice();
     S.teamA.name=g.teamA;S.teamB.name=g.teamB;S.comp=g.comp||'';S.date=g.date||'';
     syncMatch();updStats();draw();
     setTimeout(function(){exportPDF();setTimeout(next,1500);},200);

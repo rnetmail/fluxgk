@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const paginas = fs.readdirSync(RAIZ).filter(f => f.endsWith('.html'));
-const soltos = ['fluxgk-i18n.js', 'static/pocketbase-adapter.js'];
+const soltos = ['fluxgk-i18n.js', 'static/pocketbase-adapter.js', 'static/fluxgk-ditado.js'];
 let falhas = 0, total = 0;
 
 for (const pag of paginas) {

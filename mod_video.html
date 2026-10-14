@@ -807,6 +807,7 @@
   #navHome{font-size:15px;line-height:1;padding:6px 11px}
 </style>
 <script src="fluxgk-i18n.js"></script>
+<script src="/static/fluxgk-ditado.js"></script>
 </head>
 <body>
 
@@ -2002,7 +2003,7 @@ function relCopiarCapitulos(g){
     navigator.clipboard.writeText(txt);
     log(TX('vid.rel.chapOk','Capítulos copiados.'), 'ok');
   }catch(e){
-    var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    var ta = document.createElement('textarea'); ta.setAttribute('data-ditado', 'nao'); ta.value = txt; document.body.appendChild(ta);
     ta.select(); try{ document.execCommand('copy'); log(TX('vid.rel.chapOk','Capítulos copiados.'), 'ok'); }catch(e2){}
     ta.remove();
   }
