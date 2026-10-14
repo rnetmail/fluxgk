@@ -7,6 +7,7 @@
  *
  * Uso: node tools/smoke-versoes.mjs http://127.0.0.1:8090
  */
+import { cliente } from './pb-ci.mjs';
 const U = (process.argv[2] || 'http://127.0.0.1:8090').replace(/\/$/, '');
 const SENHA = 'senha-ci-123456';
 let n = 0, falhas = 0;
@@ -28,8 +29,9 @@ async function token(colecao, email, senha) {
   const r = await req('POST', `/api/collections/${colecao}/auth-with-password`, null, { identity: email, password: senha });
   return r.j && r.j.token;
 }
+const pbci = cliente(U);
 async function conta(email) {
-  await req('POST', '/api/collections/users/records', null, { email, password: SENHA, passwordConfirm: SENHA });
+  await pbci.conta(email, {}, SENHA);   /* cadastro aberto não existe mais: o superusuário cria (feature 001) */
   return token('users', email, SENHA);
 }
 

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FluxGK · Plans</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<!-- FluxGK · página pública de planos (feature 001, RF-01). Planos, módulos e preços vêm de /api/fluxgk/planos
+     (a tabela plano → módulos mora no servidor, pb_hooks/fluxgk_acesso.js). "Assinar" pede ao servidor a página
+     de pagamento hospedada (/api/fluxgk/checkout) e redireciona; o app nunca vê dado de cartão. -->
+<style>
+:root{--ink:#0a0a0a;--paper:#fafaf7;--mute:#a3a3a3;--line:#262626;--card:#141414;--amber:#E8901A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:'Space Grotesk','DM Sans',system-ui,sans-serif;min-height:100vh}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 48px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+.brand{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--paper);text-decoration:none}
+.topr{display:flex;gap:8px;align-items:center}
+.lang{background:transparent;color:var(--mute);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:600 11px 'JetBrains Mono',monospace;cursor:pointer}
+.lang[aria-pressed="true"]{color:var(--paper);border-color:#555}
+.entrar{color:var(--paper);text-decoration:none;border:1px solid #444;border-radius:8px;padding:8px 14px;font-weight:600;font-size:14px}
+h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 22px;max-width:60ch}
+.ciclo{display:inline-flex;border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:22px}
+.ciclo button{background:transparent;color:var(--mute);border:0;border-radius:8px;padding:9px 16px;font:600 14px inherit;font-family:inherit;cursor:pointer}
+.ciclo button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.plano{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.plano.dest{border-color:var(--amber)}
+.pn{font-size:18px;font-weight:700}
+.pp{font:700 26px 'JetBrains Mono',monospace;letter-spacing:-.02em}
+.pp small{font-size:13px;color:var(--mute);font-weight:400}
+.pm{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+ul{margin:0;padding-left:18px;color:#d4d4d4;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1}
+.assinar{width:100%;padding:12px;border:0;border-radius:9px;background:var(--paper);color:var(--ink);font:700 14px inherit;font-family:inherit;cursor:pointer}
+.assinar:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.nota{color:var(--mute);font-size:13px;margin-top:22px;max-width:70ch}
+.trial{border:1px solid #3f3f3f;border-radius:12px;padding:14px 16px;margin:0 0 22px;color:#e5e5e5;font-size:14px}
+.erro{color:#f87171;font-size:14px;min-height:20px;margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="brand" href="/">FluxGK</a>
+    <div class="topr">
+      <button class="lang" id="lang-pt" onclick="trocaLang('pt')">PT</button>
+      <button class="lang" id="lang-en" onclick="trocaLang('en')">EN</button>
+      <a class="entrar" href="/" data-i18n="pg.signin">Sign in</a>
+    </div>
+  </div>
+  <h1 data-i18n="pg.plans.title">Choose your plan</h1>
+  <p class="sub" data-i18n="pg.plans.sub">Goalkeeper coaching, season by season.</p>
+  <div class="trial" data-i18n="pg.trial">New here? Sign in with Google and use the Advanced plan free for 14 days.</div>
+  <div class="ciclo" role="group">
+    <button id="c-mensal" aria-pressed="true" onclick="trocaCiclo('mensal')" data-i18n="pg.monthly">Monthly</button>
+    <button id="c-anual" aria-pressed="false" onclick="trocaCiclo('anual')" data-i18n="pg.yearly">Yearly</button>
+  </div>
+  <div class="grade" id="grade"></div>
+  <div class="erro" id="erro" role="alert" aria-live="assertive"></div>
+  <p class="nota" data-i18n="pg.payNote">Card (Brazilian or international) or Pix.</p>
+</main>
+<script src="fluxgk-i18n.js"></script>
+<script>
+var I=window.FluxGKI18n, T=function(k){return I.t(k);};
+var EST={planos:[],disponivel:false,ciclo:'mensal'};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function moeda(c){try{return (c/100).toLocaleString(I.getLang()==='pt'?'pt-BR':'en-GB',{style:'currency',currency:'BRL'});}catch(e){return 'R$ '+(c/100).toFixed(2);}}
+function nomeMod(k){return k==='inteligencia'?T('pg.intel'):T('hub.mod.'+k);}
+function desenha(){
+  var g=document.getElementById('grade');
+  g.innerHTML=EST.planos.map(function(p){
+    var c=EST.ciclo==='anual'?p.anualCentavos:p.mensalCentavos, tem=c!=null&&c>0;
+    var nove=p.modulos.filter(function(m){return m!=='inteligencia';}).length;
+    return '<div class="plano'+(p.plano==='advanced'?' dest':'')+'">'
+      +'<div class="pn">'+esc(p.nome)+'</div>'
+      +'<div class="pp">'+(tem?esc(moeda(c))+'<small>'+esc(T(EST.ciclo==='anual'?'pg.perYear':'pg.perMonth'))+'</small>':'<small>'+esc(T('pg.priceSoon'))+'</small>')+'</div>'
+      +'<div class="pm">'+esc(T('pg.modules').split('{n}').join(nove))+'</div>'
+      +'<ul>'+p.modulos.map(function(m){return '<li>'+esc(nomeMod(m))+'</li>';}).join('')+'</ul>'
+      +'<button class="assinar" '+(EST.disponivel&&tem?'':'disabled ')+'onclick="assinar(\''+p.plano+'\',this)">'+esc(T('pg.choose'))+'</button>'
+      +'</div>';
+  }).join('');
+  if(!EST.disponivel)document.getElementById('erro').textContent=T('pg.unavailable');
+}
+function trocaCiclo(c){EST.ciclo=c;document.getElementById('c-mensal').setAttribute('aria-pressed',c==='mensal');document.getElementById('c-anual').setAttribute('aria-pressed',c==='anual');desenha();}
+function trocaLang(l){I.setLang(l,true);marcaLang();desenha();}
+function marcaLang(){['pt','en'].forEach(function(l){var b=document.getElementById('lang-'+l);if(b)b.setAttribute('aria-pressed',I.getLang()===l);});document.documentElement.lang=I.getLang()==='pt'?'pt-BR':'en';}
+function token(){try{var a=JSON.parse(localStorage.getItem('pocketbase_auth')||'null');return a&&a.token||'';}catch(e){return '';}}
+function assinar(plano,bt){
+  bt.disabled=true;document.getElementById('erro').textContent='';
+  var h={'Content-Type':'application/json'},t=token();if(t)h.Authorization=t;   /* logado: o plano entra direto na conta */
+  fetch('/api/fluxgk/checkout',{method:'POST',headers:h,body:JSON.stringify({plano:plano,ciclo:EST.ciclo})})
+    .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j;});})
+    .then(function(j){location.href=j.url;})
+    .catch(function(e){bt.disabled=false;document.getElementById('erro').textContent=(e&&e.message)||T('pg.err');});
+}
+I.apply();marcaLang();
+fetch('/api/fluxgk/planos').then(function(r){return r.json();}).then(function(j){EST.planos=j.planos||[];EST.disponivel=!!j.pagamentoDisponivel;desenha();})
+  .catch(function(){document.getElementById('erro').textContent=T('pg.err');});
+</script>
+</body>
+</html>

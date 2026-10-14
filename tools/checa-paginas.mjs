@@ -46,5 +46,13 @@ for (const f of soltos) {
   try { execFileSync(process.execPath, ['--check', path.join(RAIZ, f)], { stdio: 'pipe' }); }
   catch (e) { falhas++; console.error(`FALHOU ${f} — ${String(e.stderr || e.message).trim()}`); }
 }
-console.log(`${total - falhas}/${total} scripts compilam (${paginas.length} páginas).`);
+/* página da raiz que o Dockerfile do nginx não copia some do ar sem erro nenhum no build */
+const dockerNginx = fs.readFileSync(path.join(RAIZ, 'Dockerfile.nginx'), 'utf8');
+for (const pag of paginas) {
+  total++;
+  if (!new RegExp('(^|\\s)' + pag.replace(/\./g, '\\.') + '(\\s|$)', 'm').test(dockerNginx)) {
+    falhas++; console.error(`FALHOU ${pag} — não está no COPY do Dockerfile.nginx`);
+  }
+}
+console.log(`${total - falhas}/${total} scripts compilam e páginas vão para o nginx (${paginas.length} páginas).`);
 process.exit(falhas ? 1 : 0);

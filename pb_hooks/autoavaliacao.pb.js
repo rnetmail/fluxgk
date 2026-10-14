@@ -13,6 +13,7 @@ routerAdd('GET', '/api/fluxgk/auto/{token}', (e) => {
   const a = require(`${__hooks}/fluxgk_autoavaliacao.js`);
   const link = a.acharLink(e.request.pathValue('token'));
   if (!link) return e.json(404, { message: 'Link inválido ou desativado.' });
+  if (!a.donoAtivo(link)) return e.json(403, { message: 'O plano do treinador não está ativo. Fale com ele.', data: { codigo: 'plano_inativo' } });
   const hoje = a.hoje();
   const atual = a.lerResposta(link, hoje);
   return e.json(200, { goleiro: link.getString('playerName'), clube: link.getString('clubName'), hoje: hoje, resposta: atual });
@@ -22,6 +23,7 @@ routerAdd('POST', '/api/fluxgk/auto/{token}', (e) => {
   const a = require(`${__hooks}/fluxgk_autoavaliacao.js`);
   const link = a.acharLink(e.request.pathValue('token'));
   if (!link) return e.json(404, { message: 'Link inválido ou desativado.' });
+  if (!a.donoAtivo(link)) return e.json(403, { message: 'O plano do treinador não está ativo. Fale com ele.', data: { codigo: 'plano_inativo' } });
   const b = e.requestInfo().body || {};
   const v = a.validar(b);
   if (v.erro) return e.json(400, { message: v.erro });
