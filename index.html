@@ -114,6 +114,25 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 .langbtn.on{background:var(--ink);color:var(--paper)}
 .mcard{background:#fff;border:1px solid var(--faint);border-radius:12px;padding:16px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .12s,border-color .12s}
 .mcard:hover{transform:translateY(-1px);border-color:#d4d4d4}
+/* planos (feature 001): módulo fora do plano, faixa do plano, telas de plano e assinaturas */
+.mcard.mlock{opacity:.62;background:#fafaf7}
+.mcard.mlock .marr{font-size:12px}
+.mlocktag{display:inline-block;margin-top:4px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#B45309}
+.pfaixa{border:1px solid #F59E0B;background:#FFFBEB;color:#78350F;border-radius:11px;padding:12px 14px;margin:0 0 14px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.pfaixa.pvenc{border-color:#DC2626;background:#FEF2F2;color:#7F1D1D}
+.pfaixa button{border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-family:'Space Grotesk',sans-serif;background:var(--ink);color:var(--paper);cursor:pointer}
+.pinfo{font-size:13px;color:var(--ink);margin-bottom:10px;line-height:1.5}
+.prow{display:flex;gap:8px;flex-wrap:wrap}
+.prow .fi{flex:1 1 140px;margin-bottom:8px;min-width:0}
+.prow .btn{flex:0 0 auto;width:auto;padding:11px 14px;margin-top:0}
+.btsec{background:#fff;color:var(--ink);border:1px solid var(--faint)}
+.plista{font-size:12px;border:1px solid var(--faint);border-radius:9px;max-height:260px;overflow:auto;margin-bottom:12px}
+.plista div{padding:8px 10px;border-bottom:1px solid var(--faint);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;overflow-wrap:anywhere}
+.plista div:last-child{border-bottom:none}
+.pcod{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;letter-spacing:.06em;user-select:all;background:#f4f4f2;border-radius:8px;padding:10px;text-align:center;margin-bottom:10px;overflow-wrap:anywhere}
+.lou{display:flex;align-items:center;gap:10px;color:#a3a3a3;font-size:11px;margin:12px 0}
+.lou:before,.lou:after{content:'';flex:1;border-top:1px solid #333}
+.lgoogle{width:100%;padding:12px;background:transparent;color:#fafaf7;border:1px solid #444;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif}
 .mico{width:38px;height:38px;border-radius:9px;background:#f4f4f2;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .mico svg{width:18px;height:18px;stroke:var(--ink)}
 .mtx{flex:1;min-width:0}
@@ -210,7 +229,12 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
       <label class="lrem"><input type="checkbox" id="inp-rem" checked><span data-i18n="hub.stayIn">Stay signed in</span></label>
       <div class="lerr" id="lerr" role="alert" aria-live="assertive"></div>
       <button class="lbtn" id="lbtn" onclick="doLogin()" data-i18n="common.signIn">Sign in</button>
+      <div id="lgoogle-box" style="display:none">
+        <div class="lou" data-i18n="plano.or">or</div>
+        <button class="lgoogle" id="lgoogle" onclick="doLoginGoogle()" data-i18n="plano.google">Continue with Google</button>
+      </div>
     </div>
+    <div class="lfooter"><a href="/planos.html" style="color:inherit" data-i18n="plano.seePlans">See plans</a></div>
     <div class="lfooter" data-i18n="hub.footer">FluxGK · Data-Driven GK</div>
     <div class="lfooter" id="app-versao" style="margin-top:6px"></div>
   </div>
@@ -231,6 +255,7 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
   <div class="hbody">
     <div class="hgreet" id="htime" data-i18n="hub.welcome">Welcome</div>
     <div class="hgsub"><span id="hcoach" data-i18n="common.coach">Coach</span> · <span id="hmeth">—</span></div>
+    <div class="pfaixa" id="plano-faixa" role="status" style="display:none"></div>
     <div class="hstats">
       <div class="hst" role="button" tabindex="0" onclick="openStatList('sess')" onkeydown="kbAct(event,function(){openStatList('sess')})"><div class="hsv" id="st-sess">-</div><div class="hsl" data-i18n="hub.statSessions">Sessions</div></div>
       <div class="hst" role="button" tabindex="0" onclick="openStatList('match')" onkeydown="kbAct(event,function(){openStatList('match')})"><div class="hsv" id="st-match">-</div><div class="hsl" data-i18n="hub.statMatches">Matches</div></div>
@@ -312,11 +337,21 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
     <label class="fl" for="s-meth" data-i18n="hub.methodology">Methodology</label>
     <input class="fi" id="s-meth" placeholder="Constraints-Led Approach">
     <button class="btn btp" onclick="saveSettings()" data-i18n="common.save">Save</button>
+    <!-- Plano da conta (feature 001) -->
+    <div class="sec"></div>
+    <div class="sect" data-i18n="plano.title">Plan</div>
+    <div id="s-plano"></div>
     <!-- Versões: só aparece para administrador (o servidor responde 403 aos demais) -->
     <div id="s-versoes" style="display:none">
       <div class="sec"></div>
       <div class="sect" data-i18n="hub.ver.title">Versions</div>
       <div id="s-ver-corpo"></div>
+    </div>
+    <!-- Assinaturas: só administrador (o servidor responde 403 aos demais) -->
+    <div id="s-assin" style="display:none">
+      <div class="sec"></div>
+      <div class="sect" data-i18n="assin.title">Subscriptions</div>
+      <div id="s-assin-corpo"></div>
     </div>
     <div class="sec"></div>
     <button class="btn btd" onclick="doLogout()" data-i18n="common.signOut">Sign out</button>
@@ -494,21 +529,28 @@ function applyIdentity(){
 function renderMods(){
   var g=document.getElementById('mgrid');g.innerHTML='';
   MODS.forEach(function(m){
+    var livre=planoLibera(m.k), pl=livre?'':planoMinimo(m.k);
     var d=document.createElement('div');
-    d.className='mcard';d.setAttribute('role','button');d.setAttribute('tabindex','0');
-    d.setAttribute('aria-label',TX('hub.ariaOpen')+modName(m.k));
+    d.className='mcard'+(livre?'':' mlock');d.setAttribute('role','button');d.setAttribute('tabindex','0');
+    d.setAttribute('aria-label',TX('hub.ariaOpen')+modName(m.k)+(livre?'':' · '+TX('plano.locked')));
     d.onclick=function(){openModule(m.k);};
     d.onkeydown=function(e){kbAct(e,function(){openModule(m.k);});};
     d.innerHTML='<div class="mico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+m.i+'</svg></div>'
-      +'<div class="mtx"><div class="mnm">'+modName(m.k)+'</div><div class="mdesc">'+modDesc(m.k)+'</div></div>'
-      +'<span class="marr">›</span>';
+      +'<div class="mtx"><div class="mnm">'+modName(m.k)+'</div><div class="mdesc">'+modDesc(m.k)+'</div>'
+      +(livre?'':'<span class="mlocktag">🔒 '+_escV(pl?_txp('lockedBy',{p:planoNome(pl)}):TX('plano.locked'))+'</span>')+'</div>'
+      +'<span class="marr">'+(livre?'›':'🔒')+'</span>';
     g.appendChild(d);
   });
+  renderFaixa();
 }
 function loadStats(){
   var p=dataPath();
   ['st-sess','st-match','st-gk'].forEach(function(i){document.getElementById(i).textContent=p?'-':'0';});
   if(!p)return;
+  /* módulo fora do plano: o servidor não entrega os dados, e "0" seria mentira (R-02) */
+  if(!planoLibera('data')){document.getElementById('st-sess').textContent='🔒';document.getElementById('st-gk').textContent='🔒';}
+  if(!planoLibera('minutes'))document.getElementById('st-match').textContent='🔒';
+  if(planoLibera('data')){
   /* sessoes = eventos de treino do Load Control
      (users/{uid}/data/{clube}/{temporada}/load/sessions/{goleiro}/{id}).
      A sessao e um EVENTO, nao um registro por goleiro: varios goleiros (e faltas)
@@ -526,12 +568,13 @@ function loadStats(){
     });
     document.getElementById('st-sess').textContent=Object.keys(eventos).length;
   }).catch(function(e){console.error(e);});
+  }
   /* jogos = partidas do modulo Minutagem (users/{uid}/data/{clube}/{temporada}/minutes/games).
      Estrutura: games/{id} = {...} — cada id e um jogo, entao basta contar as chaves. */
-  _rtdb.ref(p+'/minutes/games').get().then(function(s){document.getElementById('st-match').textContent=s.exists()?Object.keys(s.val()).length:0;}).catch(function(e){console.error(e);});
+  if(planoLibera('minutes'))_rtdb.ref(p+'/minutes/games').get().then(function(s){document.getElementById('st-match').textContent=s.exists()?Object.keys(s.val()).length:0;}).catch(function(e){console.error(e);});
   /* goleiros = elenco do Load Control (users/{uid}/data/{clube}/{temporada}/load/players).
      Antes lia '/roster', caminho que nenhum modulo grava — por isso ficava sempre em zero. */
-  _rtdb.ref(p+'/load/players').get().then(function(s){
+  if(planoLibera('data'))_rtdb.ref(p+'/load/players').get().then(function(s){
     var pl=s.val()||{};
     var ativos=Object.keys(pl).filter(function(k){return _gkAtivo(pl[k]);}).length;
     document.getElementById('st-gk').textContent=ativos;
@@ -792,6 +835,7 @@ async function deleteSeason(sid){
   if(!confirm(msg))return;
   await U('clubs/'+cid+'/seasons/'+sid).remove();
   await _rtdb.ref('users/'+APP.uid+'/data/'+cid+'/'+sid).remove();
+  await apagarSubarvore('users/'+APP.uid+'/data/'+cid+'/'+sid);
   delete c.seasons[sid];
   if(APP.active.seasonId===sid){
     var left=Object.keys(c.seasons||{});
@@ -888,6 +932,7 @@ async function deleteClub(){
   if(!confirm(TX('hub.msg.deleteClub')+nm+TX('hub.msg.delClubWarn')))return;
   await U('clubs/'+id).remove();
   await U('data/'+id).remove();
+  await apagarSubarvore('users/'+APP.uid+'/data/'+id);
   delete APP.clubs[id];
   if(APP.active.clubId===id){
     var ids=Object.keys(APP.clubs);
@@ -908,6 +953,8 @@ function openSettings(){
   document.getElementById('s-meth').value=APP.profile.methodology||'';
   document.getElementById('sh-set').classList.add('open');
   carregarVersoes(false);
+  renderPlanoConfig();
+  carregarAssinaturas();
 }
 function closeSettings(){document.getElementById('sh-set').classList.remove('open');}
 async function saveSettings(){
@@ -957,6 +1004,7 @@ window.addEventListener('message',function(e){
   if(e.data.type==='FLUXGK_VIDEO_MAXIMIZE'){var fr=document.getElementById('mfrm');if(fr)fr.classList.toggle('vidmax',!!e.data.on);}
 });
 function openModule(key){
+  if(!planoLibera(key)){abrirPlano(key);return;}
   if(!dataPath()){showToast(TX('hub.msg.clubSeasonFirst'));openSwitch();return;}
   var m=MODS.filter(function(x){return x.k===key;})[0];
   var mtEl=document.getElementById('mtnm');
@@ -985,6 +1033,7 @@ async function boot(){
     _auth.onAuthStateChanged(async function(u){
       if(u){
         APP.uid=u.uid;
+        await carregarPlano();
         await loadAll();
         markLangButtons();
         renderMods();
@@ -997,6 +1046,7 @@ async function boot(){
       }else{
         document.getElementById('lbtn').disabled=false;
         document.getElementById('lbtn').textContent=TX('common.signIn');
+        mostrarGoogle();
         showScreen('login');
       }
     });
@@ -1081,6 +1131,143 @@ function _esperarVersao(n){
       _esperarVersao(n+1);
     }).catch(function(){_esperarVersao(n+1);});
   },10000);
+}
+/* ---------- PLANOS (feature 001) ----------
+   Quem decide o acesso é o SERVIDOR: as regras de `nodes` só entregam os dados de um módulo que está no plano e
+   dentro do prazo. Aqui só se desenha: cadeado nos módulos de fora, faixa do plano, código, portal e, para o
+   Admin, a tela de assinaturas. A tabela plano → módulos vem do servidor (/api/fluxgk/planos), nunca daqui. */
+var PLANO={conta:null,planos:[],admin:false};
+function _txp(k,o){var s=TX('plano.'+k);Object.keys(o||{}).forEach(function(x){s=s.split('{'+x+'}').join(o[x]);});return s;}
+function _txa(k,o){var s=TX('assin.'+k);Object.keys(o||{}).forEach(function(x){s=s.split('{'+x+'}').join(o[x]);});return s;}
+function _ateMs(c){var a=c&&c.acessoAte;if(!a)return 0;var t=Date.parse(String(a).replace(' ','T'));return isNaN(t)?0:t;}
+function _semVenc(c){return !!(c&&String(c.acessoAte||'').indexOf('9999')===0);}
+function planoAtivo(){var c=PLANO.conta;return !!c&&_ateMs(c)>Date.now();}
+function planoLibera(k){var c=PLANO.conta;return planoAtivo()&&!!(c.modulos||[]).length&&(c.modulos||[]).indexOf(k)>=0;}
+function planoNome(p){var x=PLANO.planos.filter(function(q){return q.plano===p;})[0];return (x&&x.nome)||(p?p.charAt(0).toUpperCase()+p.slice(1):'—');}
+function planoMinimo(k){var x=PLANO.planos.filter(function(q){return (q.modulos||[]).indexOf(k)>=0;})[0];return x?x.plano:'';}
+function _dataP(ms){try{return new Date(ms).toLocaleDateString(FluxGKI18n.getLang()==='pt'?'pt-BR':'en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '';}}
+function _moeda(c){if(c==null)return '—';try{return (c/100).toLocaleString(FluxGKI18n.getLang()==='pt'?'pt-BR':'en-GB',{style:'currency',currency:'BRL'});}catch(e){return 'R$ '+(c/100).toFixed(2);}}
+async function carregarPlano(){
+  try{PLANO.conta=await fluxdb.auth().refreshAccount();}catch(e){console.error('[planos] conta:',e);var pb=_pbV();PLANO.conta=pb&&pb.authStore&&pb.authStore.record;}
+  try{var r=await fetch('/api/fluxgk/planos');if(r.ok)PLANO.planos=(await r.json()).planos||[];}catch(e){console.error('[planos] tabela:',e);}
+}
+function renderFaixa(){
+  var f=document.getElementById('plano-faixa'),c=PLANO.conta;if(!f)return;
+  var ate=_ateMs(c),dias=Math.ceil((ate-Date.now())/86400000),html='',venc=false;
+  if(!c||!c.plano||!(c.modulos||[]).length){html=_escV(TX('plano.none'));venc=true;}
+  else if(ate<=Date.now()){html=_escV(_txp('expired',{d:_dataP(ate)}));venc=true;}
+  else if(c.origemPlano==='teste'){html=_escV(_txp('trial',{n:dias}));}
+  else if(!_semVenc(c)&&!c.assinaturaId&&dias<=7){html=_escV(_txp('soon',{n:dias}));}
+  if(!html){f.style.display='none';return;}
+  f.className='pfaixa'+(venc?' pvenc':'');
+  f.innerHTML='<span>'+html+'</span><button type="button" onclick="abrirPlano()">'+_escV(venc?TX('plano.renew'):TX('plano.subscribe'))+'</button>';
+  f.style.display='flex';
+}
+function abrirPlano(k){
+  if(k)showToast(_txp('lockedMsg',{m:modName(k),p:planoNome(planoMinimo(k))}),4000);
+  openSettings();
+  setTimeout(function(){var el=document.getElementById('s-plano');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});},150);
+}
+function renderPlanoConfig(){
+  var box=document.getElementById('s-plano'),c=PLANO.conta||{};if(!box)return;
+  var ate=_ateMs(c),linha;
+  if(!c.plano||!(c.modulos||[]).length)linha=TX('plano.none');
+  else if(ate<=Date.now())linha=_txp('stateExpired',{p:planoNome(c.plano),d:_dataP(ate)});
+  else if(_semVenc(c))linha=_txp('stateForever',{p:planoNome(c.plano)});
+  else linha=_txp(c.origemPlano==='teste'?'stateTrial':'stateUntil',{p:planoNome(c.plano),d:_dataP(ate)});
+  box.innerHTML='<div class="pinfo">'+_escV(linha)+'</div>'
+    +'<label class="fl" for="s-codigo">'+_escV(TX('plano.code'))+'</label>'
+    +'<div class="prow"><input class="fi" id="s-codigo" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX-XXXX">'
+    +'<button class="btn btp" id="s-codigo-btn" onclick="ativarCodigo()">'+_escV(TX('plano.activate'))+'</button></div>'
+    +'<div class="prow"><a class="btn btsec" style="text-align:center;text-decoration:none" href="/planos.html">'+_escV(TX('plano.seePlans'))+'</a>'
+    +(c.assinaturaId?'<button class="btn btsec" onclick="abrirPortal()">'+_escV(TX('plano.manage'))+'</button>':'')+'</div>';
+}
+async function ativarCodigo(){
+  var inp=document.getElementById('s-codigo'),bt=document.getElementById('s-codigo-btn'),cod=(inp&&inp.value||'').trim(),pb=_pbV();
+  if(!cod){showToast(TX('plano.codeEmpty'));return;}
+  bt.disabled=true;
+  try{
+    await pb.send('/api/fluxgk/ativar',{method:'POST',body:{codigo:cod}});
+    await carregarPlano();renderPlanoConfig();renderMods();loadStats();
+    showToast(_txp('activated',{p:planoNome(PLANO.conta&&PLANO.conta.plano)}),4000);
+  }catch(e){
+    var k=e&&e.data&&e.data.data&&e.data.data.codigo;
+    showToast({codigo_usado:TX('plano.errUsed'),codigo_invalido:TX('plano.errInvalid'),muitas_tentativas:TX('plano.errTooMany')}[k]||TX('plano.errGeneric'),4000);
+  }finally{bt.disabled=false;}
+}
+async function abrirPortal(){
+  try{var r=await _pbV().send('/api/fluxgk/portal',{method:'POST'});location.href=r.url;}
+  catch(e){showToast(TX('plano.errGeneric'));}
+}
+async function apagarSubarvore(path){
+  /* o adaptador só apaga o que enxerga; os nós de módulo fora do plano o servidor apaga */
+  try{await _pbV().send('/api/fluxgk/apagar-subarvore',{method:'POST',body:{path:path}});}catch(e){console.error('[planos] apagar subárvore:',e);}
+}
+function mostrarGoogle(){
+  var box=document.getElementById('lgoogle-box');if(!box)return;
+  fetch('/api/collections/users/auth-methods').then(function(r){return r.ok?r.json():null;}).then(function(m){
+    var tem=m&&m.oauth2&&m.oauth2.enabled&&(m.oauth2.providers||[]).some(function(p){return p.name==='google';});
+    box.style.display=tem?'block':'none';
+  }).catch(function(){});
+}
+function doLoginGoogle(){
+  var er=document.getElementById('lerr'),bt=document.getElementById('lgoogle');
+  er.textContent='';bt.disabled=true;
+  fluxdb.auth().signInWithProvider('google').catch(function(e){
+    bt.disabled=false;
+    var m=String(e&&e.message||'');
+    er.textContent=/popup|window/i.test(m)?TX('plano.popup'):(m||TX('plano.errGeneric'));
+  });
+}
+
+/* ---------- ASSINATURAS (Configurações, só Admin) ---------- */
+async function carregarAssinaturas(){
+  var box=document.getElementById('s-assin'),corpo=document.getElementById('s-assin-corpo'),pb=_pbV();if(!box||!pb)return;
+  var contas;
+  try{contas=await pb.send('/api/fluxgk/admin/contas',{method:'GET'});}
+  catch(e){box.style.display='none';return;}            /* 403: não é admin */
+  box.style.display='block';
+  var precos=PLANO.planos.map(function(p){
+    return '<div class="prow"><span class="fl" style="flex:0 0 100%;margin:6px 0 2px">'+_escV(planoNome(p.plano))+'</span>'
+      +'<input class="fi" id="pr-m-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.monthly'))+'" value="'+(p.mensalCentavos!=null?(p.mensalCentavos/100).toFixed(2):'')+'">'
+      +'<input class="fi" id="pr-a-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.yearly'))+'" value="'+(p.anualCentavos!=null?(p.anualCentavos/100).toFixed(2):'')+'">'
+      +'<button class="btn btsec" onclick="salvarPreco(\''+p.plano+'\')">'+_escV(TX('common.save'))+'</button></div>';
+  }).join('');
+  var opts=PLANO.planos.map(function(p){return '<option value="'+p.plano+'">'+_escV(planoNome(p.plano))+'</option>';}).join('');
+  corpo.innerHTML=
+     '<div class="fl">'+_escV(TX('assin.accounts'))+'</div>'
+    +'<div class="plista">'+(contas.itens||[]).map(function(u){
+       var a=_ateMs(u);
+       return '<div><span>'+_escV(u.email)+(u.role==='admin'?' · admin':'')+'</span><span>'+_escV(planoNome(u.plano))+' · '
+         +_escV(!u.plano?'—':(String(u.acessoAte).indexOf('9999')===0?TX('assin.forever'):(a>Date.now()?_dataP(a):_txa('expiredOn',{d:_dataP(a)}))))
+         +' · '+_escV(TX('assin.origin.'+(u.origem||'none')))+'</span></div>';
+     }).join('')+'</div>'
+    +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.gift'))+'</div>'
+    +'<div class="prow"><select class="fi" id="cg-plano">'+opts+'</select><input class="fi" id="cg-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"></div>'
+    +'<div class="prow"><input class="fi" id="cg-motivo" placeholder="'+_escV(TX('assin.reason'))+'"><button class="btn btp" onclick="gerarCortesia()">'+_escV(TX('assin.generate'))+'</button></div>'
+    +'<div id="cg-saida"></div>'
+    +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.newAccount'))+'</div>'
+    +'<div class="prow"><input class="fi" id="nc-email" type="email" placeholder="email@clube.com"><input class="fi" id="nc-senha" type="text" autocomplete="off" placeholder="'+_escV(TX('assin.password'))+'"></div>'
+    +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>'
+    +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.prices'))+'</div>'+precos;
+}
+async function gerarCortesia(){
+  var b={plano:document.getElementById('cg-plano').value,dias:Number(document.getElementById('cg-dias').value||0),motivo:document.getElementById('cg-motivo').value.trim()};
+  if(!b.motivo){showToast(TX('assin.reasonEmpty'));return;}
+  try{var r=await _pbV().send('/api/fluxgk/admin/codigos',{method:'POST',body:b});
+    document.getElementById('cg-saida').innerHTML='<div class="pcod">'+_escV(r.codigo)+'</div><div class="pinfo">'+_escV(TX('assin.codeOnce'))+'</div>';
+  }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'));}
+}
+async function criarConta(){
+  var b={email:document.getElementById('nc-email').value.trim(),senha:document.getElementById('nc-senha').value,plano:document.getElementById('nc-plano').value,dias:Number(document.getElementById('nc-dias').value||0)};
+  try{await _pbV().send('/api/fluxgk/admin/contas',{method:'POST',body:b});showToast(_txa('created',{e:b.email}),4000);carregarAssinaturas();}
+  catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
+}
+async function salvarPreco(p){
+  var c=function(id){var v=String(document.getElementById(id).value||'').replace(',','.');return Math.round(Number(v)*100);};
+  try{await _pbV().send('/api/fluxgk/admin/precos/'+p,{method:'PUT',body:{mensalCentavos:c('pr-m-'+p),anualCentavos:c('pr-a-'+p)}});
+    showToast(TX('assin.priceSaved'));await carregarPlano();
+  }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
 }
 </script>
 <script>

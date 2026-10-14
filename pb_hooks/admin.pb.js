@@ -20,7 +20,7 @@ routerAdd('GET', '/api/fluxgk/admin/contas', (e) => {
   const pag = Math.max(1, Number(e.request.url.query().get('pagina') || 1));
   const filtro = q ? 'email ~ {:q} || name ~ {:q}' : '';
   const itens = $app.findRecordsByFilter('users', filtro, '-created', 50, (pag - 1) * 50, { q: q });
-  return e.json(200, { pagina: pag, itens: itens.map(visao) });
+  return e.json(200, { pagina: pag, itens: itens.map(R.visao) });
 });
 
 routerAdd('POST', '/api/fluxgk/admin/contas', (e) => {

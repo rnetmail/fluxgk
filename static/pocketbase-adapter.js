@@ -595,6 +595,28 @@
       }).catch(function (e) { throw mapAuthError(e); });
     },
 
+    /* Login com provedor OAuth2 (feature 001: Google). Abre a janela do provedor; a conta nova nasce aqui. */
+    signInWithProvider: function (provider) {
+      return ready().then(function () {
+        try { pb.collection(NODES).unsubscribe(); } catch (e) {}
+        subscribed = false;
+        dropCache();
+        return pb.collection('users').authWithOAuth2({ provider: String(provider || 'google') });
+      }).then(function () {
+        loadCache().catch(function (e) { console.warn('[fluxdb] carga inicial falhou:', e && e.message); });
+        fireAuth();
+        return { user: pubUser() };
+      }).catch(function (e) { throw mapAuthError(e); });
+    },
+
+    /* Relê a conta no servidor (plano, módulos, vencimento) sem trocar de usuário. */
+    refreshAccount: function () {
+      return ready().then(function () {
+        if (!pb.authStore.isValid) return null;
+        return pb.collection('users').authRefresh({ requestKey: null }).then(function (r) { return r && r.record; });
+      });
+    },
+
     createUserWithEmailAndPassword: function (email, password, extra) {
       return ready().then(function () {
         var data = { email: String(email).trim(), password: String(password), passwordConfirm: String(password) };

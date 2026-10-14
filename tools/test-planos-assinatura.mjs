@@ -173,6 +173,9 @@ ok(pl.j.estado === 'aplicado' && !pl.j.codigo, 'página de sucesso da compra log
 /* ------------------------------------------- Admin ------------------------------------------- */
 const naoAdm = await req('GET', '/api/fluxgk/admin/contas', tec.t);
 ok(naoAdm.s === 403, 'técnico não lista contas', naoAdm.s);
+const contasAdm = await req('GET', `/api/fluxgk/admin/contas?q=${encodeURIComponent('tec.' + sfx)}`, admin.t);
+ok(contasAdm.s === 200 && contasAdm.j.itens.length === 1 && contasAdm.j.itens[0].plano === 'advanced' && contasAdm.j.itens[0].assinatura === true,
+  'Admin lista e busca contas com plano e assinatura', contasAdm);
 const cort = await req('POST', '/api/fluxgk/admin/codigos', admin.t, { plano: 'pro', dias: 30, motivo: 'parceiro CI' });
 ok(cort.s === 200 && /^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(cort.j.codigo), 'Admin gera cortesia', cort);
 const semMotivo = await req('POST', '/api/fluxgk/admin/codigos', admin.t, { plano: 'pro', dias: 30 });
