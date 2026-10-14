@@ -195,8 +195,8 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height
 .btn-danger:hover{background:#fee2e2;}
 .btn-sm{padding:6px 12px;font-size:11px;}
 .label{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--mute);text-transform:uppercase;margin-bottom:5px;}
-select,input[type=text],input[type=date]{background:var(--surface);border:1px solid var(--border2);color:var(--ink);padding:9px 12px;border-radius:7px;font-family:var(--font);font-size:13px;width:100%;outline:none;transition:border .15s;}
-select:focus,input:focus{border-color:#999;}
+select,input[type=text],input[type=date],textarea{background:var(--surface);border:1px solid var(--border2);color:var(--ink);padding:9px 12px;border-radius:7px;font-family:var(--font);font-size:13px;width:100%;outline:none;transition:border .15s;}
+select:focus,input:focus,textarea:focus{border-color:#999;}
 input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radius:6px;}
 .mc-group{display:flex;flex-wrap:wrap;gap:6px;}
 .mc-btn{padding:7px 12px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--mute);font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s;}
@@ -329,6 +329,7 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
 #fb-loading .loading-bar-fill{background:var(--paper);}
 </style>
 <script src="fluxgk-i18n.js"></script>
+<script src="/static/fluxgk-ditado.js"></script>
 </head>
 <body>
 <div id="fb-loading" style="display:none;position:fixed;inset:0;background:#0d0d0d;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
@@ -563,6 +564,10 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
               <button class="court-zone" onclick="selCourt(this,125)" data-i18n="st.g.right">Right</button>
             </div>
           </div>
+          <div style="grid-column:1/-1;">
+            <div data-i18n="dit.obsLance" class="label">Shot note</div>
+            <textarea id="sf-obs" rows="2" data-i18n-placeholder="dit.obsLancePh" placeholder="What happened in this shot (speak or type)"></textarea>
+          </div>
         </div>
         <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px;">
           <button data-i18n="st.clear" class="btn btn-ghost" onclick="clearShotForm()">Clear</button>
@@ -597,6 +602,10 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
             <div data-i18n="st.offResult" class="label">Result *</div>
             <div class="mc-group" id="off-result-group"></div>
           </div>
+          <div style="grid-column:1/-1;">
+            <div data-i18n="dit.obsAcao" class="label">Action note</div>
+            <textarea id="off-obs" rows="2" data-i18n-placeholder="dit.obsAcaoPh" placeholder="What happened in this action (speak or type)"></textarea>
+          </div>
         </div>
         <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px;">
           <button data-i18n="st.clear" class="btn btn-ghost" onclick="clearOffForm()">Clear</button>
@@ -609,6 +618,7 @@ input[type=color]{padding:3px;height:38px;cursor:pointer;width:50px;border-radiu
       </div>
     </div>
   </div>
+  <div id="rec-notas" style="display:none;margin:16px 0;"></div>
   <div id="rec-phase-review" style="display:none;">
     <div class="card mb16">
       <div data-i18n="st.gameSummary" style="font-weight:700;font-size:15px;margin-bottom:16px;">Game Summary</div>
@@ -1279,6 +1289,8 @@ function recTab(t){
   });
   if(t==='off'){ renderOffForms(); renderOffList(); updateOffNum(); populateOffGkSelect(lastShotGk||''); }
   if(t==='review') buildReview();
+  const nEl=document.getElementById('rec-notas');
+  if(nEl){ nEl.style.display=(t==='meta')?'none':''; _stNotasDesenhar(); }
   // Show/hide edit context banner
   const banner=document.getElementById('rec-edit-banner');
   if(banner) banner.style.display=editingGameId?'':'none';
@@ -1354,6 +1366,7 @@ function updateShotNum(){
 }
 function clearShotForm(){
   document.getElementById('sf-minute').value='';
+  const ob=document.getElementById('sf-obs'); if(ob) ob.value='';
   ['sf-moment-group','sf-skill-group','sf-result-group','sf-hdist-group'].forEach(id=>{
     document.getElementById(id).querySelectorAll('.mc-btn').forEach(b=>b.classList.remove('active'));
   });
@@ -1374,7 +1387,7 @@ function clearShotForm(){
 var _rascT=null, _rascNuvemEm=0;
 function _rascChave(){ return (window._SPATH&&_SPATH.games) ? 'fluxgk_stats_rascunho::'+_SPATH.games : null; }
 function _rascCaminho(){ return (window._SPATH&&_SPATH.games) ? _SPATH.games.replace(/\/games$/,'/rascunho') : null; }
-function _rascTemConteudo(c){ return !!(c && ((c.shots&&c.shots.length) || (_asArr(c.offActions).length))); }
+function _rascTemConteudo(c){ return !!(c && ((c.shots&&c.shots.length) || (_asArr(c.offActions).length) || (Array.isArray(c.notas)&&c.notas.length))); }
 function guardarRascunho(){
   const k=_rascChave(); if(!k) return;
   if(!_rascTemConteudo(CUR)){ return; }
@@ -1418,11 +1431,42 @@ async function oferecerRascunho(){
   recTab('shots'); renderShotsList(); updateShotNum();
 }
 
+// ═══ DITADO (feature 002): observação por lance e notas do jogo ═══
+function _stEsc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function _stObsPor(obj,id){ const el=document.getElementById(id); const v=el?el.value.trim():''; if(v) obj.obs=v; else delete obj.obs; }
+function _stObsHtml(o){ return o?`<div style="margin-top:6px;font-size:12px;color:var(--mute);overflow-wrap:anywhere;">${_stEsc(o)}</div>`:''; }
+/* minuto sugerido para a nota: o do formulário aberto; senão o maior já registrado no jogo */
+function _stMinutoAgora(){
+  for(const id of ['sf-minute','off-minute']){
+    const el=document.getElementById(id);
+    if(el&&el.offsetParent!==null&&parseInt(el.value)>=0) return parseInt(el.value);
+  }
+  const ms=[...(CUR.shots||[]),..._asArr(CUR.offActions)].map(x=>parseInt(x.minute)).filter(n=>n>=0);
+  return ms.length?Math.max(...ms):null;
+}
+let _stNotasUI=null;
+function _stNotasDesenhar(){
+  const el=document.getElementById('rec-notas'); if(!el||!window.FluxGKDitado) return;
+  if(!_stNotasUI) _stNotasUI=FluxGKDitado.notasDoJogo(el,{titulo:TX('dit.notas'),
+    notas:()=>Array.isArray(CUR.notas)?CUR.notas:[],
+    minuto:_stMinutoAgora,
+    salvar:n=>{ CUR.notas=n; guardarRascunho(); }});
+  else _stNotasUI.desenhar();
+}
+function _stRelatorio(g){
+  if(!window.FluxGKDitado) return '';
+  const obs=[...(g.shots||[]).map((x,i)=>({rotulo:'#'+(i+1)+(x.minute?' '+x.minute+"'":''),texto:x.obs})),
+             ..._asArr(g.offActions).map((x,i)=>({rotulo:'OF'+(i+1)+(x.minute?' '+x.minute+"'":''),texto:x.obs}))];
+  const h=FluxGKDitado.htmlRelatorio(g.notas,obs,{notas:TX('dit.notas'),obs:TX('dit.obsLances')});
+  return h?`<div class="sec"><div class="sec-title">${_stEsc(g.date||'')} · ${_stEsc(g.opponent||'')}</div>${h}</div>`:'';
+}
+
 function saveShot(){
   if(!SF.result){alert(TX('st.msg.pickResult'));return;}
   const gkVal=document.getElementById('sf-gk').value||SF.gk||null;
   if(gkVal) lastShotGk=gkVal;
   const shot={...SF, minute:document.getElementById('sf-minute').value, gk:gkVal};
+  _stObsPor(shot,'sf-obs');
   if(editShotIdx!==null) CUR.shots[editShotIdx]=shot;
   else CUR.shots.push(shot);
   guardarRascunho();
@@ -1449,13 +1493,14 @@ function renderShotsList(){
         <button class="btn btn-danger btn-sm" onclick="delShot(${i})">✕</button>
       </div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>`;
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>${_stObsHtml(s.obs)}`;
     el.appendChild(d);
   });
 }
 function editShot(idx){
   const s=CUR.shots[idx]; editShotIdx=idx;
   document.getElementById('sf-minute').value=s.minute||'';
+  const ob=document.getElementById('sf-obs'); if(ob) ob.value=s.obs||'';
   SF={...s};
   const fieldMap={'moment':'sf-moment-group','skill':'sf-skill-group','result':'sf-result-group','hDistance':'sf-hdist-group'};
   Object.entries(fieldMap).forEach(([key,gid])=>{
@@ -1519,6 +1564,7 @@ function updateOffNum(){
 }
 function clearOffForm(){
   const m=document.getElementById('off-minute'); if(m) m.value='';
+  const ob=document.getElementById('off-obs'); if(ob) ob.value='';
   const preservedGk=lastShotGk;
   OA={minute:'',type:null,moment:null,result:null,gk:preservedGk};
   editOaIdx=null;
@@ -1533,6 +1579,7 @@ function saveOffAction(){
   const gkVal=document.getElementById('off-gk').value||OA.gk||null;
   if(gkVal) lastShotGk=gkVal;
   const act={...OA, minute:document.getElementById('off-minute').value, gk:gkVal};
+  _stObsPor(act,'off-obs');
   if(editOaIdx!==null) CUR.offActions[editOaIdx]=act;
   else CUR.offActions.push(act);
   guardarRascunho();
@@ -1559,7 +1606,7 @@ function renderOffList(){
         <button class="btn btn-danger btn-sm" onclick="delOffAction(${i})">✕</button>
       </div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>`;
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>${_stObsHtml(a.obs)}`;
     el.appendChild(d);
   });
 }
@@ -1569,6 +1616,7 @@ function editOffAction(idx){
   editOaIdx=idx;
   OA={...a};
   const m=document.getElementById('off-minute'); if(m) m.value=a.minute||'';
+  const ob=document.getElementById('off-obs'); if(ob) ob.value=a.obs||'';
   renderOffForms(); // reflete a selecao de OA nos botoes
   populateOffGkSelect(a.gk||lastShotGk||'');
   updateOffNum();
@@ -1729,7 +1777,7 @@ function renderHistoryShotsList(gameId){
         <button class="btn btn-danger btn-sm" style="font-size:10px;" onclick="histDeleteShot('${gameId}',${i})">✕</button>
       </div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>`;
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${tags}</div>${_stObsHtml(s.obs)}`;
     el.appendChild(d);
   });
 }
@@ -1866,7 +1914,7 @@ function histSaveShot(gameId,idx){
     goalZone:hf.goalZone||null,
     courtZone:hf.courtZone||null,
   };
-  if(idx!==null&&idx!==undefined) g.shots[idx]=shot;
+  if(idx!==null&&idx!==undefined){ if(g.shots[idx]&&g.shots[idx].obs) shot.obs=g.shots[idx].obs; g.shots[idx]=shot; }
   else g.shots.push(shot);
   persistGame(g);
   document.getElementById('hist-shot-form-'+gameId).style.display='none';
@@ -1879,7 +1927,7 @@ function toggleEditGame(id){
 function openGameInRecord(id){
   const g=ST.games.find(g=>g.id==id); if(!g) return;
   // Deep-copy game into CUR (offActions pode faltar em jogos antigos)
-  CUR={...g, shots:g.shots.map(s=>({...s})), offActions:_asArr(g.offActions).map(a=>({...a}))};
+  CUR={...g, shots:g.shots.map(s=>({...s})), offActions:_asArr(g.offActions).map(a=>({...a})), notas:(Array.isArray(g.notas)?g.notas:[]).map(n=>({...n}))};
   if(CUR.gf===undefined) CUR.gf=null;
   if(CUR.ga===undefined) CUR.ga=null;
   editingGameId=id;
@@ -2772,6 +2820,8 @@ function exportReport(){
       <div class="sec-title">${TX("st.pdf.detailed")}</div>
       <table><thead><tr>${tableHead}</tr></thead><tbody>${tableRows}</tbody></table>
     </div>
+
+    ${reportType==='game'?games.map(_stRelatorio).join(''):''}
 
     <div class="footer">
       <span>FluxGK · Data-Driven GK Analysis Platform</span>

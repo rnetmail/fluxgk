@@ -220,6 +220,7 @@ tr:hover td{background:var(--surface2);}
 #fb-loading{background:var(--carbon);}
 </style>
 <script src="fluxgk-i18n.js"></script>
+<script src="/static/fluxgk-ditado.js"></script>
 </head>
 <body>
 
@@ -331,6 +332,8 @@ tr:hover td{background:var(--surface2);}
     <div data-i18n="min.gameSummary" class="section-hdr">Game Summary</div>
     <div id="game-summary-content"></div>
   </div>
+
+  <div class="card mb20" id="min-notas"></div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-accent" onclick="saveGame()">
@@ -823,7 +826,7 @@ function collectGameData(){
       h1Secs:secOf.h1,h2Secs:secOf.h2,e1Secs:secOf.e1,e2Secs:secOf.e2,
       totalSecs};
   });
-  return {date,opp,comp,season,totalMin,halfMin,hasOT,etMin,gkData,id:Date.now()};
+  return {date,opp,comp,season,totalMin,halfMin,hasOT,etMin,gkData,notas:MIN_NOTAS.slice(),id:Date.now()};
 }
 
 function saveGame(){
@@ -844,6 +847,27 @@ function saveGame(){
     .catch(e=>{alert(TX('min.errorSaving')+e.message);});
 }
 
+// ── DITADO (feature 002): notas do jogo com o minuto ─────────────
+let MIN_NOTAS=[], _minNotasUI=null;
+function _minNotasDesenhar(){
+  const el=document.getElementById('min-notas'); if(!el||!window.FluxGKDitado) return;
+  if(!_minNotasUI) _minNotasUI=FluxGKDitado.notasDoJogo(el,{titulo:TX('dit.notas'),
+    notas:()=>MIN_NOTAS,
+    /* sem cronômetro na Minutagem: sugere o último minuto anotado; o treinador corrige no campo */
+    minuto:()=>{ const ms=MIN_NOTAS.map(n=>n.min).filter(n=>n!=null); return ms.length?Math.max(...ms):null; },
+    salvar:n=>{ MIN_NOTAS=n; }});
+  else _minNotasUI.desenhar();
+}
+window.addEventListener('load',_minNotasDesenhar);
+function _minRelatorio(games){
+  if(!window.FluxGKDitado) return '';
+  const esc=FluxGKDitado.esc;
+  return games.map(g=>{
+    const h=FluxGKDitado.htmlRelatorio(g.notas,[],{notas:TX('dit.notas')});
+    return h?`<div class="sec"><div class="sec-title">${esc(g.date||'')} · ${esc(g.opp||'')}</div>${h}</div>`:'';
+  }).join('');
+}
+
 function resetGameForm(){
   document.getElementById('g-date').value='';
   document.getElementById('g-opp').value='';
@@ -852,6 +876,7 @@ function resetGameForm(){
   document.getElementById('g-half-min').value='20';
   const otcb=document.getElementById('g-has-ot'); if(otcb)otcb.checked=false;
   const etm=document.getElementById('g-et-min'); if(etm)etm.value='5';
+  MIN_NOTAS=[]; _minNotasDesenhar();
   buildCollectForm();
 }
 
@@ -953,6 +978,7 @@ function editGame(id){
   document.getElementById('g-half-min').value=g.halfMin||20;
   const otcb=document.getElementById('g-has-ot'); if(otcb)otcb.checked=!!g.hasOT;
   const etm=document.getElementById('g-et-min'); if(etm)etm.value=g.etMin||5;
+  MIN_NOTAS=(Array.isArray(g.notas)?g.notas:[]).map(n=>({...n})); _minNotasDesenhar();
   // Rebuild form with GK data from the game
   buildCollectForm();
   // After form is built, populate squad selection and intervals
@@ -1317,6 +1343,8 @@ function buildMinutesPDF(games,gks,opts){
         <tbody>${gameRows}</tbody>
       </table>
     </div>
+
+    ${_minRelatorio(games)}
 
     <div class="footer">
       <span>${TX("min.pdf.footer")}</span>

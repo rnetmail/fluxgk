@@ -42,6 +42,12 @@ jobs:
       - name: Testes de unidade das regras compartilhadas
         run: node tools/test-adversarios.mjs && node tools/test-carga.mjs
 
+      - name: Ditado por voz (feature 002) — navegador com reconhecimento simulado
+        run: |
+          # playwright-core sem baixar navegador: usa o Chrome que já vem no runner
+          npm i --no-save --no-audit --no-fund --prefix /tmp/pw playwright-core@1.55.0 >/dev/null
+          PW_MODULE=/tmp/pw/node_modules/playwright-core/index.mjs PW_CHANNEL=chrome node tools/test-ditado.mjs
+
       - name: Compose válido
         run: PORTA_HTTP=3999 docker compose config -q
 
