@@ -28,6 +28,7 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 /* ---------- LOADING ---------- */
 #scr-loading{background:#0a0a0a;align-items:center;justify-content:center;position:fixed;inset:0;z-index:9999}
 #scr-loading.active{display:flex}
+#scr-termos{background:var(--ink)}
 .ldots{display:flex;gap:6px}
 .ldots i{width:7px;height:7px;border-radius:50%;background:#3a3a3a;animation:bl 1.2s infinite}
 .ldots i:nth-child(2){animation-delay:.2s}.ldots i:nth-child(3){animation-delay:.4s}
@@ -232,11 +233,28 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
       <div id="lgoogle-box" style="display:none">
         <div class="lou" data-i18n="plano.or">or</div>
         <button class="lgoogle" id="lgoogle" onclick="doLoginGoogle()" data-i18n="plano.google">Continue with Google</button>
+        <div class="lou" style="font-size:11px;margin-top:10px" data-i18n="legal.byContinuing">By continuing you agree to the Terms and the Privacy Policy.</div>
       </div>
     </div>
-    <div class="lfooter"><a href="/planos.html" style="color:inherit" data-i18n="plano.seePlans">See plans</a></div>
+    <div class="lfooter"><a href="/planos.html" style="color:inherit" data-i18n="plano.seePlans">See plans</a> · <a href="/termos.html" style="color:inherit" data-i18n="legal.terms">Terms</a> · <a href="/privacidade.html" style="color:inherit" data-i18n="legal.privacy">Privacy</a></div>
     <div class="lfooter" data-i18n="hub.footer">FluxGK · Data-Driven GK</div>
     <div class="lfooter" id="app-versao" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<div class="screen" id="scr-termos">
+  <div class="lwrap">
+    <div class="llogo"><div class="lbrand">FluxGK</div></div>
+    <div class="lcard">
+      <div class="lt" data-i18n="legal.acceptTitle">Terms of use and privacy</div>
+      <div class="lts" id="termos-versao" style="margin-bottom:14px"></div>
+      <p style="color:#d4d4d4;font-size:14px;line-height:1.55;margin:0 0 14px" data-i18n="legal.acceptText">To keep using FluxGK, read and accept the Terms of use and the Privacy Policy.</p>
+      <p style="margin:0 0 14px;font-size:14px"><a href="/termos.html" target="_blank" rel="noopener" style="color:#fafaf7" data-i18n="legal.terms">Terms</a> · <a href="/privacidade.html" target="_blank" rel="noopener" style="color:#fafaf7" data-i18n="legal.privacy">Privacy</a></p>
+      <label class="lrem"><input type="checkbox" id="termos-ok"><span data-i18n="legal.iAccept">I have read and accept the Terms of use and the Privacy Policy</span></label>
+      <div class="lerr" id="termos-err" role="alert"></div>
+      <button class="lbtn" id="termos-btn" onclick="aceitarTermos()" data-i18n="legal.accept">Accept and continue</button>
+      <button class="lgoogle" style="margin-top:10px" onclick="_auth.signOut()" data-i18n="common.signOut">Sign out</button>
+    </div>
   </div>
 </div>
 
@@ -354,8 +372,16 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
       <div id="s-integ"></div>
       <div id="s-assin-corpo"></div>
     </div>
+    <!-- Dados legais: só administrador -->
+    <div id="s-legal" style="display:none">
+      <div class="sec"></div>
+      <div class="sect" data-i18n="legal.adminTitle">Legal details</div>
+      <div id="s-legal-corpo"></div>
+    </div>
     <div class="sec"></div>
+    <div class="pinfo" style="font-size:13px"><a href="/termos.html" target="_blank" rel="noopener" data-i18n="legal.terms">Terms</a> · <a href="/privacidade.html" target="_blank" rel="noopener" data-i18n="legal.privacy">Privacy</a></div>
     <button class="btn btd" onclick="doLogout()" data-i18n="common.signOut">Sign out</button>
+    <button class="btn btsec" style="margin-top:10px;color:var(--red)" onclick="excluirMinhaConta()" data-i18n="legal.deleteAccount">Delete my account</button>
   </div>
 </div>
 
@@ -956,6 +982,7 @@ function openSettings(){
   carregarVersoes(false);
   renderPlanoConfig();
   carregarAssinaturas();
+  carregarLegalAdmin();
 }
 function closeSettings(){document.getElementById('sh-set').classList.remove('open');}
 async function saveSettings(){
@@ -1035,6 +1062,7 @@ async function boot(){
       if(u){
         APP.uid=u.uid;
         await carregarPlano();
+        if(!(await termosEmDia())){showScreen('termos');return;}
         await loadAll();
         markLangButtons();
         renderMods();
@@ -1308,6 +1336,58 @@ async function testarIntegracao(p){
   try{var r=await _pbV().send('/api/fluxgk/admin/integracoes/testar',{method:'POST',body:{provedor:p}});
     st.textContent=r.ok?_txa('testOk',{c:r.conta||''}):_txa('testFail',{e:r.erro||''});
   }catch(e){st.textContent=_txa('testFail',{e:(e&&e.message)||''});}
+}
+/* ---------- TERMOS E PRIVACIDADE (feature 001, RN-P17 a RN-P20) ----------
+   Versão 0 = nada publicado, ninguém é cobrado. Publicada uma versão, quem não a aceitou vê a tela de aceite. */
+var LEGAL=null;
+async function carregarLegal(){try{var r=await fetch('/api/fluxgk/legal');if(r.ok)LEGAL=await r.json();}catch(e){console.error('[legal]',e);}return LEGAL;}
+async function termosEmDia(){
+  var l=await carregarLegal(),c=PLANO.conta||{};
+  if(!l||!l.publicado)return true;
+  if((c.termosVersao||0)>=l.versao)return true;
+  document.getElementById('termos-versao').textContent=_txl('version',{v:l.versao,d:_dataP(Date.parse(String(l.vigenciaDesde).replace(' ','T')))});
+  return false;
+}
+function _txl(k,o){var s=TX('legal.'+k);Object.keys(o||{}).forEach(function(x){s=s.split('{'+x+'}').join(o[x]);});return s;}
+async function aceitarTermos(){
+  var er=document.getElementById('termos-err');er.textContent='';
+  if(!document.getElementById('termos-ok').checked){er.textContent=TX('legal.mustCheck');return;}
+  var bt=document.getElementById('termos-btn');bt.disabled=true;
+  try{
+    await _pbV().send('/api/fluxgk/termos/aceitar',{method:'POST',body:{versao:LEGAL.versao}});
+    await carregarPlano();await loadAll();markLangButtons();renderMods();refresh();showScreen('home');
+  }catch(e){er.textContent=(e&&e.message)||TX('plano.errGeneric');}
+  finally{bt.disabled=false;}
+}
+async function excluirMinhaConta(){
+  var c=PLANO.conta||{};
+  var em=prompt(_txl('deleteConfirm',{e:c.email||''}));
+  if(em===null)return;
+  try{
+    await _pbV().send('/api/fluxgk/conta/excluir',{method:'POST',body:{email:em}});
+    closeSettings();_auth.signOut();showToast(TX('legal.deleted'),5000);
+  }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
+}
+async function carregarLegalAdmin(){
+  var box=document.getElementById('s-legal'),corpo=document.getElementById('s-legal-corpo'),pb=_pbV();if(!box||!pb)return;
+  var d;try{d=await pb.send('/api/fluxgk/admin/legal',{method:'GET'});}catch(e){box.style.display='none';return;}
+  box.style.display='block';
+  var r=d.responsavel||{},en=d.encarregado||{};
+  var campo=function(id,rot,v,tipo){return '<label class="fl" for="lg-'+id+'">'+_escV(rot)+'</label><input class="fi" id="lg-'+id+'" type="'+(tipo||'text')+'" value="'+_escV(v||'')+'">';};
+  corpo.innerHTML='<div class="pinfo">'+_escV(d.publicado?_txl('published',{v:d.versao,d:_dataP(Date.parse(String(d.vigenciaDesde).replace(' ','T')))}):TX('legal.notPublished'))+'</div>'
+    +campo('nomeResponsavel',TX('legal.f.name'),r.nome)+campo('documento',TX('legal.f.doc'),r.documento)+campo('endereco',TX('legal.f.address'),r.endereco)
+    +campo('cidadeUf',TX('legal.f.city'),r.cidadeUf)+campo('emailContato',TX('legal.f.email'),r.email,'email')
+    +campo('encarregadoNome',TX('legal.f.dpo'),en.nome)+campo('encarregadoEmail',TX('legal.f.dpoEmail'),en.email===r.email?'':en.email,'email')
+    +'<div class="prow"><button class="btn btsec" onclick="salvarLegal(false)">'+_escV(TX('common.save'))+'</button>'
+    +'<button class="btn btp" onclick="salvarLegal(true)">'+_escV(TX('legal.publish'))+'</button></div>'
+    +'<div class="pinfo" style="font-size:12px;margin-top:8px">'+_escV(TX('legal.publishNote'))+'</div>';
+}
+async function salvarLegal(publicar){
+  if(publicar&&!confirm(TX('legal.confirmPublish')))return;
+  var b={publicar:!!publicar};
+  ['nomeResponsavel','documento','endereco','cidadeUf','emailContato','encarregadoNome','encarregadoEmail'].forEach(function(k){b[k]=document.getElementById('lg-'+k).value.trim();});
+  try{await _pbV().send('/api/fluxgk/admin/legal',{method:'PUT',body:b});showToast(TX(publicar?'legal.publishedOk':'legal.savedOk'),4000);carregarLegalAdmin();}
+  catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),5000);}
 }
 async function gerarCortesia(){
   var b={plano:document.getElementById('cg-plano').value,dias:Number(document.getElementById('cg-dias').value||0),motivo:document.getElementById('cg-motivo').value.trim()};

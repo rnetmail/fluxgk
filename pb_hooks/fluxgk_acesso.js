@@ -60,7 +60,7 @@ function regraNodes() {
 
 /** Campos da conta que só o servidor grava (o cliente não pode enviá-los, D-09). */
 const CAMPOS_PROTEGIDOS = ['plano', 'modulos', 'acessoAte', 'origemPlano', 'role', 'testeUsado',
-  'assinaturaId', 'clientePagamentoId', 'tentativasCodigo', 'tentativasDesde'];
+  'assinaturaId', 'clientePagamentoId', 'tentativasCodigo', 'tentativasDesde', 'termosVersao', 'termosAceitosEm'];
 
 function semCamposProtegidos() {
   return CAMPOS_PROTEGIDOS.map(function (c) { return '@request.body.' + c + ':isset = false'; }).join(' && ');
