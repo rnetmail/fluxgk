@@ -400,6 +400,40 @@ paths:
         "204": { description: inscrito }
         "404": { $ref: "#/components/responses/Erro" }
 
+  # ── feature 001: pagamento, códigos de ativação e planos (contrato completo em _reversa_forward/001-pagamento-e-planos/interfaces/) ──
+  /api/fluxgk/planos:
+    get: { summary: "Planos, módulos e preços (público)", responses: { "200": { description: "{planos[], pagamentoDisponivel, provedor, meios[]}" } } }
+  /api/fluxgk/checkout:
+    post: { summary: "Página de pagamento hospedada do provedor ativo {plano, ciclo, meio?}", responses: { "200": { description: "{url}" }, "400": { description: "plano ou ciclo inválido" }, "503": { description: "pagamento indisponível ou sem preço" } } }
+  /api/fluxgk/codigo:
+    get: { summary: "Estado do código de uma compra (?s=cs_…|mp_…|mpa_…)", responses: { "200": { description: "{estado: pronto|aguardando|usado|aplicado, codigo?, plano?}" }, "404": { description: "formato desconhecido" } } }
+  /api/fluxgk/ativar:
+    post: { summary: "Ativa um código na conta logada {codigo}", responses: { "200": { description: "{plano, modulos, acessoAte}" }, "400": { description: "codigo_invalido" }, "409": { description: "codigo_usado" }, "429": { description: "muitas_tentativas (10 erros/hora por conta)" } } }
+  /api/fluxgk/portal:
+    post: { summary: "Portal do cliente (Stripe) ou conta do Mercado Pago", responses: { "200": { description: "{url}" }, "404": { description: "sem_assinatura" } } }
+  /api/fluxgk/pagamento/webhook:
+    post: { summary: "Webhook da Stripe (Stripe-Signature HMAC, idempotente por evento)", responses: { "200": { description: "ok ou repetido" }, "400": { description: "assinatura inválida" } } }
+  /api/fluxgk/pagamento/webhook-mp:
+    post: { summary: "Webhook do Mercado Pago (x-signature HMAC; evento relido na API)", responses: { "200": { description: "ok ou repetido" }, "400": { description: "assinatura inválida" } } }
+  /api/fluxgk/apagar-subarvore:
+    post: { summary: "Apaga clube ou temporada inteiros do próprio técnico {path}", responses: { "200": { description: "{apagados}" }, "400": { description: "caminho inválido" } } }
+  /api/fluxgk/admin/contas:
+    get: { summary: "Admin: contas com plano e vencimento", responses: { "200": { description: "{itens[]}" }, "403": { description: "não é admin" } } }
+    post: { summary: "Admin: cria conta com e-mail e senha {email, senha, plano, dias}", responses: { "200": { description: "conta" }, "409": { description: "e-mail repetido" } } }
+  /api/fluxgk/admin/contas/{id}:
+    patch: { summary: "Admin: plano, prazo, papel, desativar", responses: { "200": { description: "conta" } } }
+  /api/fluxgk/admin/codigos:
+    get: { summary: "Admin: códigos (nunca o código em claro)", responses: { "200": { description: "{itens[]}" } } }
+    post: { summary: "Admin: cortesia {plano, dias, motivo}", responses: { "200": { description: "{codigo} (mostrado uma vez)" } } }
+  /api/fluxgk/admin/precos/{plano}:
+    put: { summary: "Admin: preço mensal e anual (cria os preços no provedor)", responses: { "200": { description: "preços" } } }
+  /api/fluxgk/admin/eventos:
+    get: { summary: "Admin: histórico de pagamentos e ações", responses: { "200": { description: "{itens[]}" } } }
+  /api/fluxgk/admin/integracoes:
+    get: { summary: "Admin: provedor ativo, chaves (só definida/final), Google", responses: { "200": { description: "resumo" } } }
+    put: { summary: "Admin: grava provedor, endereço, chaves (cifradas) e Google", responses: { "200": { description: "resumo + precosCriados" } } }
+  /api/fluxgk/admin/integracoes/testar:
+    post: { summary: "Admin: confere as credenciais {provedor}", responses: { "200": { description: "{ok, conta?|erro?}" } } }
 components:
   securitySchemes:
     tokenUsuario:

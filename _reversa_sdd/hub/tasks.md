@@ -94,7 +94,7 @@
 
 ### Evoluções decididas pelo dono
 
-- [ ] T-17, Cadastro de contas só pelo Administrador: tela de CRUD de contas visível só para o Admin; `createRule` de `users` deixa de ser aberto (D-09)
+- [X] T-17 (feature 001, 14/10: rotas `/api/fluxgk/admin/contas` e tela Configurações → Assinaturas; cadastro anônimo fechado), Cadastro de contas só pelo Administrador: tela de CRUD de contas visível só para o Admin; `createRule` de `users` deixa de ser aberto (D-09)
   - Origem no legado: `pb_migrations/1760270000_init_fluxgk.js` (`users.createRule = ''`)
   - Critério de pronto: criação anônima pela API retorna erro; o Admin cria, lista e desativa contas na tela
   - Confiança: 🟢 (D-21: `FLUXGK_ADMINS` até existir o cadastro pelo Admin; depois, campo `role` na conta)

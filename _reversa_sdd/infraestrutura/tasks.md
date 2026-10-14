@@ -121,10 +121,10 @@
   - Critério de pronto: `/api/v1/` documentada em `openapi/` e acessível com chave de API
   - Confiança: 🔴 (D-31: definir primeiro quem consome; a forma depende disso)
 
-- [ ] T-22, Login com conta Google e liberação por plano (D-09, depois): provedor OAuth2 do PocketBase configurado por variável; códigos de ativação numa coleção própria
+- [~] T-22, Login com conta Google e liberação por plano (D-09): **implementado na feature 001** (`_reversa_forward/001-pagamento-e-planos/`, em HML desde 14/10). Google, Stripe e Mercado Pago configurados pela tela do Admin (chaves cifradas no banco), não mais por variável; códigos de ativação em `codigos_ativacao`
   - Origem no legado: inexistente
   - Critério de pronto: conta Google com código ativo entra e vê só os módulos do plano
-  - Confiança: 🔴 (pagamento e planos a desenhar)
+  - Confiança: 🟡 (servidor e telas testados no CI; **falta o ponta a ponta com o provedor real e o Google** — T033 da feature, depende das contas do dono)
 
 ### Esteira (13/10)
 

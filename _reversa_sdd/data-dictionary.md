@@ -13,7 +13,13 @@
 | `password` | hash | sim | |
 | `name` | text | não | vira `displayName` no adaptador |
 | `verified` | bool | — | sem SMTP, nunca verificado |
-Regras: `createRule = ''` (cadastro aberto); `list/view/update/delete = id = @request.auth.id`.
+| `plano` | select `basic\|intermediate\|advanced\|pro` | não | feature 001 (14/10): só o servidor grava |
+| `modulos` | select múltiplo (9 módulos + `inteligencia`) | não | módulos liberados; fixos por plano (`pb_hooks/fluxgk_acesso.js`) |
+| `acessoAte` | date | não | `9999-12-31` = sem vencimento; vencido = nenhum módulo abre |
+| `origemPlano` | select `teste\|pagamento\|cortesia\|legado` | não | |
+| `role` | select `tecnico\|admin` | não | Admin do app (D-21); `FLUXGK_ADMINS` vale na transição |
+| `testeUsado`, `assinaturaId`, `clientePagamentoId`, `tentativasCodigo`, `tentativasDesde` | bool, text, text, number, date | não | teste grátis, assinatura no provedor, limite de erros de código |
+Regras (desde a feature 001): `createRule` só pelo login Google (`@request.context = "oauth2"`) e sem enviar campo de plano; `updateRule = id = @request.auth.id` sem enviar campo de plano; `list/view/delete = id = @request.auth.id`. Antes era `createRule = ''` (cadastro aberto).
 
 ### `nodes`
 | Campo | Tipo | Obrig. | Observação |
@@ -23,7 +29,18 @@ Regras: `createRule = ''` (cadastro aberto); `list/view/update/delete = id = @re
 | `path` | text ≤ 1024 | sim | caminho da árvore, sem barra inicial |
 | `data` | json ≤ 5 MB | não | `{v: <valor>}` — o valor pode ser objeto, lista, número, texto ou booleano |
 | `created`, `updated` | autodate | — | |
-Índices: único `(owner, path)`; `path`. Regras: todas `owner = @request.auth.id`.
+Índices: único `(owner, path)`; `path`. Regras: `delete = owner = @request.auth.id`; list/view/create/update exigem também, para
+cada prefixo de caminho de módulo (`pb_hooks/fluxgk_acesso.js#PREFIXOS`), o módulo em `@request.auth.modulos` (`~ '"m"'`) e
+`@request.auth.acessoAte > @now` (feature 001). Antes, todas eram só `owner = @request.auth.id`.
+
+### Coleções da feature 001 (só o servidor lê e grava, salvo indicação)
+| Coleção | Para quê |
+|---|---|
+| `codigos_ativacao` | código de ativação: só o hash SHA-256, os 4 últimos caracteres, plano, ciclo, origem, sessão de pagamento, quem gerou e quem usou |
+| `planos_config` | preço mensal e anual por plano e ids no provedor (Stripe e Mercado Pago); leitura pública |
+| `eventos_pagamento` | histórico: webhooks, ativações, cortesias, mudanças do Admin (nunca com chave) |
+| `testes_usados` | hash do e-mail que já usou os 14 dias de teste |
+| `config_integracoes` | provedor ativo, endereço público e chaves da Stripe e do Mercado Pago, cifradas com `PB_ENCRYPTION_KEY` |
 
 ## Lógico — árvore `users/<uid>/…`
 
