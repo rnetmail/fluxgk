@@ -35,6 +35,14 @@ services:
       AMBIENTE: ${AMBIENTE:-prd}
       FLUXGK_ADMINS: ${FLUXGK_ADMINS:-}
       GH_TOKEN_IMPLANTAR: ${GH_TOKEN_IMPLANTAR:-}
+      # Assinatura (feature 001): sem as chaves do serviço de pagamento as rotas de pagamento respondem 503 e o
+      # resto do app segue normal; sem as do Google o botão "Entrar com Google" não aparece. HML usa chaves de TESTE.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Endereço público do app (volta do pagamento e do login Google), ex.: https://fluxgk.rstecbr.com.br
+      FLUXGK_URL_PUBLICA: ${FLUXGK_URL_PUBLICA:-}
       TZ: ${TZ:-America/Bahia}
     volumes:
       - pb_data:/pb/pb_data

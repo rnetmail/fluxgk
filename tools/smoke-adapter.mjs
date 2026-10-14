@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cliente } from './pb-ci.mjs';
 
 const PB_BASE = process.env.PB_URL || 'http://127.0.0.1:8090';
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -171,11 +172,17 @@ async function main() {
   await esperar(() => estados.length > 0, 8000);
   checar('onAuthStateChanged avisa deslogado', estados[0] === null, JSON.stringify(estados));
 
-  /* 3 · cria e loga */
+  /* 3 · cadastro pela API está fechado (feature 001): a conta nasce pelo Admin ou pelo Google */
   await auth.setPersistence(fluxdb.auth.Auth.Persistence.LOCAL);
-  const cred = await auth.createUserWithEmailAndPassword(EMAIL_A, SENHA);
+  let cadastrou = true;
+  try { await auth.createUserWithEmailAndPassword(`anonimo-${selo}@fluxgk.local`, SENHA); } catch (_) { cadastrou = false; }
+  checar('createUserWithEmailAndPassword é recusado (cadastro fechado)', !cadastrou);
+  const pbci = cliente(PB_BASE);
+  await pbci.conta(EMAIL_A, {}, SENHA);
+  await pbci.conta(EMAIL_B, {}, SENHA);
+  const cred = await auth.signInWithEmailAndPassword(EMAIL_A, SENHA);
   const uidA = cred && cred.user && cred.user.uid;
-  checar('createUserWithEmailAndPassword cria e loga', !!uidA, 'uid=' + uidA);
+  checar('signInWithEmailAndPassword loga a conta criada pelo Admin', !!uidA, 'uid=' + uidA);
   checar('currentUser traz uid e email',
     auth.currentUser && auth.currentUser.uid === uidA && auth.currentUser.email === EMAIL_A,
     JSON.stringify(auth.currentUser));
@@ -328,7 +335,7 @@ async function main() {
   await auth.signOut();
   checar('signOut limpa currentUser', auth.currentUser === null, JSON.stringify(auth.currentUser));
 
-  await auth.createUserWithEmailAndPassword(EMAIL_B, SENHA);
+  await auth.signInWithEmailAndPassword(EMAIL_B, SENHA);
   const uidB = auth.currentUser.uid;
   checar('segundo usuário loga', !!uidB && uidB !== uidA, uidB + ' vs ' + uidA);
 

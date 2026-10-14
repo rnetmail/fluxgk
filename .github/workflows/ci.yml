@@ -74,6 +74,22 @@ jobs:
           node tools/smoke-versoes.mjs http://127.0.0.1:8090
           node tools/smoke-auto.mjs http://127.0.0.1:8090
 
+      - name: Planos (feature 001) — regras por plano, proteção da conta, assinatura
+        run: |
+          docker rm -f pb >/dev/null
+          docker run -d --name pb -p 127.0.0.1:8090:8090 -e AMBIENTE=hml -e FLUXGK_ADMINS=chefe@ci.local \
+            -e PB_ADMIN_EMAIL=ci@ci.local -e PB_ADMIN_PASSWORD=ci-senha-123456 fluxgk-pb-ci
+          for i in $(seq 40); do curl -sf http://127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
+          node tools/test-planos-regras.mjs http://127.0.0.1:8090
+          node tools/test-planos-conta.mjs http://127.0.0.1:8090
+
+      - name: Planos (feature 001) — migration sobre contas antigas e volta de versão
+        run: |
+          git fetch -q --depth=1 origin main
+          mkdir -p /tmp/antiga && git archive FETCH_HEAD | tar -x -C /tmp/antiga
+          docker build -q -f /tmp/antiga/Dockerfile.pocketbase -t fluxgk-pb-antiga /tmp/antiga
+          sh tools/test-planos-migracao.sh fluxgk-pb-ci fluxgk-pb-antiga
+
       - name: Logs do PocketBase (se falhou)
         if: failure()
         run: docker logs pb 2>&1 | tail -80 || true

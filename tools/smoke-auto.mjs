@@ -5,6 +5,7 @@
  * inválida é recusada; código errado e link revogado dão 404.
  * Uso: node tools/smoke-auto.mjs http://127.0.0.1:8090 */
 import crypto from 'node:crypto';
+import { cliente } from './pb-ci.mjs';
 const U = (process.argv[2] || 'http://127.0.0.1:8090').replace(/\/$/, '');
 let n = 0, falhas = 0;
 const ok = (c, nome, det) => { n++; if (!c) falhas++; console.log(`${c ? 'ok  ' : 'FALHOU'} ${String(n).padStart(2)} · ${nome}${!c && det ? ' → ' + det : ''}`); };
@@ -13,11 +14,10 @@ async function req(m, p, t, b) {
   let j = null; try { j = await r.json(); } catch {}
   return { s: r.status, j };
 }
-async function conta(email) {
-  const senha = 'senha-auto-123456';
-  await req('POST', '/api/collections/users/records', null, { email, password: senha, passwordConfirm: senha });
-  const r = await req('POST', '/api/collections/users/auth-with-password', null, { identity: email, password: senha });
-  return { t: r.j.token, id: r.j.record.id };
+const pbci = cliente(U);
+async function conta(email) {   /* cadastro aberto não existe mais: o superusuário cria (feature 001) */
+  const c = await pbci.conta(email);
+  return { t: c.t, id: c.id };
 }
 const sufixo = Date.now().toString(36);
 const tec = await conta(`tecnico.${sufixo}@ci.local`), outro = await conta(`outro.${sufixo}@ci.local`);

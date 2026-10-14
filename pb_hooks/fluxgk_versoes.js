@@ -26,14 +26,9 @@ function cfg() {
   };
 }
 
-/** Admin = superusuário do PocketBase, ou conta de `users` com e-mail em FLUXGK_ADMINS. */
+/** Admin: a regra mora em fluxgk_acesso.js (role admin na conta, FLUXGK_ADMINS na transição, ou superusuário). */
 function ehAdmin(e) {
-  if (e.hasSuperuserAuth && e.hasSuperuserAuth()) return true;
-  const a = e.auth;
-  if (!a) return false;
-  let email = '';
-  try { email = String(a.email() || '').toLowerCase(); } catch (_) { email = String(a.get('email') || '').toLowerCase(); }
-  return !!email && cfg().admins.indexOf(email) >= 0;
+  return require(`${__hooks}/fluxgk_acesso.js`).ehAdmin(e);
 }
 
 function quem(e) {
