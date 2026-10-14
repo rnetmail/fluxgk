@@ -19,6 +19,7 @@ const c = await conta(`basic.${sfx}@ci.local`, { plano: 'basic', modulos: ['data
 const tentativas = {
   plano: 'pro', modulos: ['xg'], acessoAte: '2100-01-01 00:00:00.000Z', origemPlano: 'cortesia', role: 'admin',
   testeUsado: false, assinaturaId: 'sub_x', clientePagamentoId: 'cus_x', tentativasCodigo: 0, tentativasDesde: '',
+  termosVersao: 99, termosAceitosEm: '2026-01-01 00:00:00.000Z',
 };
 for (const [campo, valor] of Object.entries(tentativas)) {
   const r = await req('PATCH', `/api/collections/users/records/${c.id}`, c.t, { [campo]: valor });
