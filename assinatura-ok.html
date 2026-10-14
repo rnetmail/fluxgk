@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>FluxGK · Payment</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<!-- FluxGK · volta do pagamento (feature 001, RF-02 e D-05). O serviço de pagamento devolve para
+     /assinatura-ok.html?s=<sessão>; a página pergunta a /api/fluxgk/codigo e mostra o código de ativação enquanto
+     ele não for usado (reabrir o link mostra de novo). No Pix a confirmação pode demorar: tenta a cada 3 s por 2 min. -->
+<style>
+:root{--ink:#0a0a0a;--paper:#fafaf7;--mute:#a3a3a3;--line:#262626;--card:#141414;--amber:#E8901A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:'Space Grotesk','DM Sans',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+main{width:100%;max-width:480px;padding:32px 16px}
+.brand{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:20px;text-align:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:20px;margin:0}
+p{margin:0;color:#d4d4d4;font-size:14px;line-height:1.55}
+.rot{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.cod{font:700 22px 'JetBrains Mono',monospace;letter-spacing:.06em;text-align:center;background:#1f1f1f;border:1px solid #333;border-radius:10px;padding:14px;user-select:all;overflow-wrap:anywhere}
+.btn{display:block;width:100%;padding:12px;border:0;border-radius:9px;background:var(--paper);color:var(--ink);font:700 14px inherit;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none}
+.btn.sec{background:transparent;color:var(--paper);border:1px solid #444}
+.st{font-size:13px;color:var(--mute);min-height:18px}
+.ldots{display:flex;gap:6px;justify-content:center;padding:8px}
+.ldots i{width:7px;height:7px;border-radius:50%;background:#555;animation:bl 1.2s infinite}
+.ldots i:nth-child(2){animation-delay:.2s}.ldots i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">FluxGK</div>
+  <div class="card" id="card" aria-live="polite">
+    <div class="ldots"><i></i><i></i><i></i></div>
+    <p data-i18n="ok.wait">Confirming your payment…</p>
+  </div>
+</main>
+<script src="fluxgk-i18n.js"></script>
+<script>
+var I=window.FluxGKI18n, T=function(k){return I.t(k);};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+var card=document.getElementById('card'), s=new URLSearchParams(location.search).get('s')||'', inicio=Date.now();
+document.documentElement.lang=I.getLang()==='pt'?'pt-BR':'en';
+I.apply();
+function msg(titulo,texto){
+  card.innerHTML='<h1>'+esc(titulo)+'</h1>'+(texto?'<p>'+esc(texto)+'</p>':'')+'<a class="btn" href="/">'+esc(T('ok.go'))+'</a>';
+}
+function pronto(j){
+  card.innerHTML='<h1>'+esc(T('ok.title'))+'</h1>'
+    +'<div class="rot">'+esc(T('ok.code'))+'</div>'
+    +'<div class="cod" id="cod">'+esc(j.codigo)+'</div>'
+    +'<button class="btn sec" id="copiar">'+esc(T('ok.copy'))+'</button><div class="st" id="st"></div>'
+    +'<p>'+esc(T('ok.next'))+'</p>'
+    +'<p>'+esc(T('ok.keep'))+'</p>'
+    +'<a class="btn" href="/">'+esc(T('ok.go'))+'</a>';
+  document.getElementById('copiar').onclick=function(){
+    var el=document.getElementById('cod'),st=document.getElementById('st'),t=el.textContent.trim();
+    var ok=function(){st.textContent=T('ok.copied');};
+    var fb=function(){try{var r=document.createRange();r.selectNodeContents(el);var sel=getSelection();sel.removeAllRanges();sel.addRange(r);if(document.execCommand('copy'))ok();}catch(e){}};
+    try{navigator.clipboard.writeText(t).then(ok,fb);}catch(e){fb();}
+  };
+}
+function consulta(){
+  fetch('/api/fluxgk/codigo?s='+encodeURIComponent(s)).then(function(r){
+    if(r.status===404)return {estado:'nada'};
+    return r.json();
+  }).then(function(j){
+    if(j.estado==='pronto')return pronto(j);
+    if(j.estado==='usado')return msg(T('ok.title'),T('ok.used'));
+    if(j.estado==='aplicado')return msg(T('ok.title'),T('ok.applied'));
+    if(j.estado==='nada')return msg(T('ok.notFound'),'');
+    if(Date.now()-inicio>120000){
+      card.innerHTML='<p>'+esc(T('ok.waitLong'))+'</p><a class="btn" href="'+esc(location.href)+'">↻</a>';
+      return;
+    }
+    setTimeout(consulta,3000);
+  }).catch(function(){setTimeout(consulta,3000);});
+}
+if(!s)msg(T('ok.notFound'),'');else consulta();
+</script>
+</body>
+</html>
