@@ -125,6 +125,14 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 .pinfo{font-size:13px;color:var(--ink);margin-bottom:10px;line-height:1.5}
 .prow{display:flex;gap:8px;flex-wrap:wrap}
 .prow .fi{flex:1 1 140px;margin-bottom:8px;min-width:0}
+/* feature 003: cards de gateway em Planos e pagamento */
+.gw{border:1px solid var(--faint);border-radius:11px;padding:14px;margin:0 0 12px;background:#fff}
+.gwh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.gwn{font-weight:700;font-size:15px;color:var(--ink)}
+.gwp{font:600 10px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 9px;border:1px solid var(--faint);color:var(--mute)}
+.gwp.ok{border-color:#16a34a;color:#15803d}
+.gwp.pad{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.gwr{display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 12px;color:var(--ink)}
 .prow .btn{flex:0 0 auto;width:auto;padding:11px 14px;margin-top:0}
 .btsec{background:#fff;color:var(--ink);border:1px solid var(--faint)}
 .plista{font-size:12px;border:1px solid var(--faint);border-radius:9px;max-height:260px;overflow:auto;margin-bottom:12px}
@@ -1256,13 +1264,20 @@ async function carregarAssinaturas(){
   try{contas=await pb.send('/api/fluxgk/admin/contas',{method:'GET'});}
   catch(e){box.style.display='none';return;}            /* 403: não é admin */
   box.style.display='block';
+  _contasUi(contas);
   carregarIntegracoes();
-  var precos=PLANO.planos.map(function(p){
+}
+/* valores dos planos (feature 003: moram em Planos e pagamento, junto com os gateways) */
+function _precosUi(){
+  return PLANO.planos.map(function(p){
     return '<div class="prow"><span class="fl" style="flex:0 0 100%;margin:6px 0 2px">'+_escV(planoNome(p.plano))+'</span>'
       +'<input class="fi" id="pr-m-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.monthly'))+'" value="'+(p.mensalCentavos!=null?(p.mensalCentavos/100).toFixed(2):'')+'">'
       +'<input class="fi" id="pr-a-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.yearly'))+'" value="'+(p.anualCentavos!=null?(p.anualCentavos/100).toFixed(2):'')+'">'
       +'<button class="btn btsec" onclick="salvarPreco(\''+p.plano+'\')">'+_escV(TX('common.save'))+'</button></div>';
   }).join('');
+}
+function _contasUi(contas){
+  var corpo=document.getElementById('s-assin-corpo');
   var opts=PLANO.planos.map(function(p){return '<option value="'+p.plano+'">'+_escV(planoNome(p.plano))+'</option>';}).join('');
   corpo.innerHTML=
      '<div class="fl">'+_escV(TX('assin.accounts'))+'</div>'
@@ -1278,8 +1293,7 @@ async function carregarAssinaturas(){
     +'<div id="cg-saida"></div>'
     +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.newAccount'))+'</div>'
     +'<div class="prow"><input class="fi" id="nc-email" type="email" placeholder="email@clube.com"><input class="fi" id="nc-senha" type="text" autocomplete="off" placeholder="'+_escV(TX('assin.password'))+'"></div>'
-    +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>'
-    +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.prices'))+'</div>'+precos;
+    +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>';
 }
 /* ---------- INTEGRAÇÕES (Admin): provedor ativo, chaves cifradas no servidor, Google ----------
    O servidor nunca devolve chave em claro: a tela mostra "definida · final XXXX". Campo vazio = mantém. */
@@ -1294,33 +1308,54 @@ async function carregarIntegracoes(){
   var box=document.getElementById('s-integ'),pb=_pbV();if(!box||!pb)return;
   try{_INTEG=await pb.send('/api/fluxgk/admin/integracoes',{method:'GET'});}catch(e){box.innerHTML='';return;}
   var d=_INTEG,u=d.urlPublica||location.origin;
-  var radio=function(v,rot){return '<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:6px"><input type="radio" name="integ-prov" value="'+v+'"'+(d.provedorAtivo===v?' checked':'')+'> '+_escV(rot)+'</label>';};
-  box.innerHTML='<div class="fl">'+_escV(TX('assin.integ'))+'</div>'
+  /* feature 003: Planos e pagamento = valores + cadastro de gateways (chave pública, segredos, modo, padrão) + Google */
+  var gws=(d.gateways||[]).map(function(g){
+    var pre=g.id==='stripe'?'stripe':'mp';
+    var pill=g.padrao?'<span class="gwp pad">'+_escV(TX('assin.gw.default'))+'</span>'
+      :(g.configurado?'<span class="gwp ok">'+_escV(TX('assin.gw.ready'))+'</span>':'<span class="gwp">'+_escV(TX('assin.gw.notReady'))+'</span>');
+    var seg=g.id==='stripe'
+      ?_segredoUi('ig-stripeSecretKey',TX('assin.secretKey'),g.segredos.chave)+_segredoUi('ig-stripeWebhookSecret',TX('assin.webhookSecret'),g.segredos.segredoWebhook)
+      :_segredoUi('ig-mpAccessToken',TX('assin.accessToken'),g.segredos.token)+_segredoUi('ig-mpWebhookSecret',TX('assin.webhookSecret'),g.segredos.segredoWebhook);
+    return '<div class="gw" id="gw-'+g.id+'"><div class="gwh"><span class="gwn">'+_escV(g.nome)+'</span>'+pill+'</div>'
+      +'<label class="gwr"><input type="radio" name="integ-prov" value="'+g.id+'"'+(g.padrao?' checked':'')+'> '+_escV(TX('assin.gw.useDefault'))+'</label>'
+      +'<label class="fl" for="ig-'+pre+'PublicKey">'+_escV(TX('assin.gw.publicKey'))+'</label>'
+      +'<input class="fi" id="ig-'+pre+'PublicKey" autocomplete="off" spellcheck="false" value="'+_escV(g.chavePublica||'')+'" placeholder="'+(g.id==='stripe'?'pk_test_…':'TEST-…')+'">'
+      +seg
+      +'<label class="fl" for="ig-'+pre+'Modo">'+_escV(TX('assin.gw.mode'))+'</label>'
+      +'<select class="fi" id="ig-'+pre+'Modo"><option value="transparente"'+(g.modo==='transparente'?' selected':'')+'>'+_escV(TX('assin.gw.transparent'))+'</option>'
+      +'<option value="pagina"'+(g.modo==='pagina'?' selected':'')+'>'+_escV(TX('assin.gw.hosted'))+'</option></select>'
+      +'<div class="pinfo" style="font-size:12px">'+_escV(TX(g.id==='stripe'?'assin.gw.methodsStripe':'assin.gw.methodsMp'))+'</div>'
+      +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(g.webhook||'')+'</code></div>'
+      +'<button class="btn btsec" onclick="testarIntegracao(\''+g.id+'\')">'+_escV(TX('assin.test'))+' '+_escV(g.nome)+'</button></div>';
+  }).join('');
+  box.innerHTML='<div class="fl">'+_escV(TX('assin.payTitle'))+'</div>'
     +(d.cifra?'':'<div class="pfaixa pvenc" style="display:block">'+_escV(TX('assin.noCipher'))+'</div>')
-    +'<div class="pinfo">'+_escV(TX('assin.activeProvider'))+'</div>'+radio('stripe','Stripe')+radio('mercadopago','Mercado Pago')
+    +'<div class="sect" style="margin-top:6px">'+_escV(TX('assin.prices'))+'</div>'
+    +'<div class="pinfo" style="font-size:12px">'+_escV(TX('assin.pricesHint'))+'</div>'+_precosUi()
+    +'<div class="sect" style="margin-top:16px">'+_escV(TX('assin.gw.title'))+'</div>'
+    +'<div class="pinfo">'+_escV(TX('assin.activeProvider'))+'</div>'+gws
     +'<label class="fl" for="ig-url" style="margin-top:10px">'+_escV(TX('assin.publicUrl'))+'</label><input class="fi" id="ig-url" value="'+_escV(d.urlPublica||'')+'" placeholder="'+_escV(location.origin)+'">'
-    +'<div class="sect" style="margin-top:6px">Stripe</div>'
-    +_segredoUi('ig-stripeSecretKey',TX('assin.secretKey'),d.stripe.chave)+_segredoUi('ig-stripeWebhookSecret',TX('assin.webhookSecret'),d.stripe.segredoWebhook)
-    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook')+'</code></div>'
-    +'<button class="btn btsec" onclick="testarIntegracao(\'stripe\')">'+_escV(TX('assin.test'))+' Stripe</button>'
-    +'<div class="sect" style="margin-top:16px">Mercado Pago</div>'
-    +_segredoUi('ig-mpAccessToken',TX('assin.accessToken'),d.mercadopago.token)+_segredoUi('ig-mpWebhookSecret',TX('assin.webhookSecret'),d.mercadopago.segredoWebhook)
-    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook-mp')+'</code></div>'
-    +'<button class="btn btsec" onclick="testarIntegracao(\'mercadopago\')">'+_escV(TX('assin.test'))+' Mercado Pago</button>'
     +'<div class="sect" style="margin-top:16px">Google</div>'
     +'<div class="pinfo">'+_escV(d.google.ligado?TX('assin.googleOn'):TX('assin.googleOff'))+'</div>'
     +'<label class="fl" for="ig-googleClientId">Client ID</label><input class="fi" id="ig-googleClientId" value="'+_escV(d.google.clientId||'')+'">'
     +_segredoUi('ig-googleClientSecret','Client Secret',d.google.segredoDefinido?{definida:true,final:'',origem:'tela'}:null)
     +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.redirectUrl'))+' <code>'+_escV(u+'/api/oauth2-redirect')+'</code></div>'
     +'<div id="ig-st" class="pinfo" aria-live="polite"></div>'
-    +'<button class="btn btp" onclick="salvarIntegracoes()">'+_escV(TX('assin.saveInteg'))+'</button>';
+    +'<button class="btn btp" onclick="salvarIntegracoes()">'+_escV(TX('assin.saveInteg'))+'</button>'
+    +'<div class="sec" style="margin-top:18px"></div>';
 }
 async function salvarIntegracoes(){
   var b={},el=function(i){return document.getElementById(i);};
+  var gw=function(id){return (_INTEG.gateways||[]).filter(function(g){return g.id===id;})[0]||{};};
   var r=document.querySelector('input[name="integ-prov"]:checked');if(r&&r.value!==_INTEG.provedorAtivo)b.provedorAtivo=r.value;
   if(el('ig-url').value.trim()!==(_INTEG.urlPublica||''))b.urlPublica=el('ig-url').value.trim();
   ['stripeSecretKey','stripeWebhookSecret','mpAccessToken','mpWebhookSecret','googleClientSecret'].forEach(function(k){var v=el('ig-'+k).value.trim();if(v)b[k]=v;});
   if(el('ig-googleClientId').value.trim()!==(_INTEG.google.clientId||''))b.googleClientId=el('ig-googleClientId').value.trim();
+  [['stripe','stripe'],['mp','mercadopago']].forEach(function(x){
+    var g=gw(x[1]),pk=el('ig-'+x[0]+'PublicKey'),md=el('ig-'+x[0]+'Modo');
+    if(pk&&pk.value.trim()!==(g.chavePublica||''))b[x[0]+'PublicKey']=pk.value.trim();
+    if(md&&md.value!==g.modo)b[x[0]+'Modo']=md.value;
+  });
   if(!Object.keys(b).length){showToast(TX('assin.nothing'));return;}
   try{var d=await _pbV().send('/api/fluxgk/admin/integracoes',{method:'PUT',body:b});
     showToast(d.aviso||TX('assin.integSaved'),4000);await carregarPlano();carregarIntegracoes();
@@ -1401,8 +1436,14 @@ async function criarConta(){
   try{await _pbV().send('/api/fluxgk/admin/contas',{method:'POST',body:b});showToast(_txa('created',{e:b.email}),4000);carregarAssinaturas();}
   catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
 }
+/* "49,90", "49.90", "R$ 1.234,56" → centavos (feature 003). Com vírgula, o ponto é separador de milhar. */
+function _centavos(txt){
+  var v=String(txt||'').replace(/R\$|\s/g,'');
+  if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');
+  var n=Number(v);return v&&isFinite(n)?Math.round(n*100):NaN;
+}
 async function salvarPreco(p){
-  var c=function(id){var v=String(document.getElementById(id).value||'').replace(',','.');return Math.round(Number(v)*100);};
+  var c=function(id){return _centavos(document.getElementById(id).value);};
   try{await _pbV().send('/api/fluxgk/admin/precos/'+p,{method:'PUT',body:{mensalCentavos:c('pr-m-'+p),anualCentavos:c('pr-a-'+p)}});
     showToast(TX('assin.priceSaved'));await carregarPlano();
   }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}

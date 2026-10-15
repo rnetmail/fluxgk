@@ -5,6 +5,10 @@
 /// valor de volta, só se está definido e os 4 últimos caracteres. As variáveis de ambiente antigas (STRIPE_*,
 /// MP_*, FLUXGK_URL_PUBLICA, FLUXGK_PROVEDOR) ficam como RESERVA: valem só quando o campo da tela está vazio.
 /// O Google não é guardado aqui: salvar grava o provedor direto na configuração OAuth2 da coleção `users`.
+///
+/// Feature 003: cada gateway tem também a CHAVE PÚBLICA (a do SDK do navegador, que não é segredo) e o MODO de checkout
+/// (`transparente` = o cliente paga sem sair do FluxGK; `pagina` = página hospedada do gateway, o da 001). O "gateway
+/// padrão" da tela é o `provedorAtivo`, e só vira padrão o gateway que tem credencial.
 
 const SEGREDOS = {
   stripeSecretKey: 'STRIPE_SECRET_KEY',
@@ -13,6 +17,12 @@ const SEGREDOS = {
   mpWebhookSecret: 'MP_WEBHOOK_SECRET',
 };
 const PROVEDORES = ['stripe', 'mercadopago'];
+const MODOS = ['transparente', 'pagina'];
+/* campo da tela → {gateway, formato da chave pública} */
+const PUBLICAS = {
+  stripePublicKey: { g: 'stripe', re: /^pk_(test|live)_[A-Za-z0-9]{8,200}$/ },
+  mpPublicKey: { g: 'mercadopago', re: /^(TEST|APP_USR)-[A-Za-z0-9-]{8,200}$/ },
+};
 
 function env(n) { return String($os.getenv(n) || '').trim(); }
 function chaveCifra() { const k = env('PB_ENCRYPTION_KEY'); return k.length === 32 ? k : ''; }
@@ -50,6 +60,10 @@ function ler(app) {
     mp: { token: v('mpAccessToken'), segredo: v('mpWebhookSecret') },
     url: ((r && r.getString('urlPublica')) || env('FLUXGK_URL_PUBLICA')).replace(/\/$/, ''),
   };
+  c.stripe.publica = (r && r.getString('stripePublicKey')) || '';
+  c.mp.publica = (r && r.getString('mpPublicKey')) || '';
+  c.stripe.modo = modoEfetivo(r && r.getString('stripeModo'), c.stripe.publica);
+  c.mp.modo = modoEfetivo(r && r.getString('mpModo'), c.mp.publica);
   let p = (r && r.getString('provedorAtivo')) || env('FLUXGK_PROVEDOR');
   if (PROVEDORES.indexOf(p) < 0) p = c.stripe.chave ? 'stripe' : (c.mp.token ? 'mercadopago' : '');
   c.provedor = p;
@@ -57,6 +71,25 @@ function ler(app) {
 }
 
 function final4(s) { return s ? s.slice(-4) : ''; }
+
+/** Modo que vale: transparente só com chave pública; vazio = transparente se houver chave. */
+function modoEfetivo(gravado, publica) {
+  if (!publica) return 'pagina';
+  return gravado === 'pagina' ? 'pagina' : 'transparente';
+}
+/** O gateway tem a credencial do servidor? */
+function configurado(c, g) { return g === 'stripe' ? !!c.stripe.chave : (g === 'mercadopago' ? !!c.mp.token : false); }
+
+/** O que a página pública de planos precisa para pagar: gateway padrão, modo, chave pública e meios. Sem segredo. */
+function checkoutPublico(app) {
+  const c = ler(app);
+  if (!c.provedor || !configurado(c, c.provedor)) return null;
+  const g = c.provedor === 'stripe' ? c.stripe : c.mp;
+  return {
+    gateway: c.provedor, modo: g.modo, chavePublica: g.modo === 'transparente' ? g.publica : '',
+    meios: c.provedor === 'mercadopago' ? ['cartao', 'pix'] : (g.modo === 'transparente' ? ['cartao'] : ['automatico']),
+  };
+}
 
 /** O que a tela do Admin pode ver: nada em claro. */
 function resumo(app) {
@@ -72,7 +105,17 @@ function resumo(app) {
     const ps = users.oauth2.providers || [];
     for (let i = 0; i < ps.length; i++) if (ps[i].name === 'google') { gid = ps[i].clientId || ''; gsec = !!ps[i].clientSecret; }
   } catch (_) {}
+  const u = c.url || '';
+  const gateways = [
+    { id: 'stripe', nome: 'Stripe', configurado: configurado(c, 'stripe'), padrao: c.provedor === 'stripe', modo: c.stripe.modo,
+      chavePublica: c.stripe.publica, webhook: u + '/api/fluxgk/pagamento/webhook', meiosTransparente: ['cartao'],
+      segredos: { chave: item('stripeSecretKey', c.stripe.chave), segredoWebhook: item('stripeWebhookSecret', c.stripe.segredo) } },
+    { id: 'mercadopago', nome: 'Mercado Pago', configurado: configurado(c, 'mercadopago'), padrao: c.provedor === 'mercadopago', modo: c.mp.modo,
+      chavePublica: c.mp.publica, webhook: u + '/api/fluxgk/pagamento/webhook-mp', meiosTransparente: ['cartao', 'pix'],
+      segredos: { token: item('mpAccessToken', c.mp.token), segredoWebhook: item('mpWebhookSecret', c.mp.segredo) } },
+  ];
   return {
+    padrao: c.provedor || '', gateways: gateways,
     provedorAtivo: c.provedor, urlPublica: c.url, cifra: !!chaveCifra(),
     stripe: { chave: item('stripeSecretKey', c.stripe.chave), segredoWebhook: item('stripeWebhookSecret', c.stripe.segredo) },
     mercadopago: { token: item('mpAccessToken', c.mp.token), segredoWebhook: item('mpWebhookSecret', c.mp.segredo) },
@@ -120,6 +163,24 @@ function gravar(app, b, adminId) {
     if (b[campo] === undefined || b[campo] === null) return;
     r.set(campo, cifrar(String(b[campo]).trim())); mudou.push(campo + (String(b[campo]).trim() ? ' trocada' : ' apagada'));
   });
+  Object.keys(PUBLICAS).forEach(function (campo) {
+    if (b[campo] === undefined || b[campo] === null) return;
+    const v = String(b[campo]).trim();
+    if (v && !PUBLICAS[campo].re.test(v)) throw new Error('chave_publica_invalida');
+    r.set(campo, v); mudou.push(campo + (v ? ' trocada' : ' apagada'));
+  });
+  [['stripeModo', 'stripe'], ['mpModo', 'mercadopago']].forEach(function (x) {
+    if (b[x[0]] === undefined || b[x[0]] === null) return;
+    if (b[x[0]] !== '' && MODOS.indexOf(b[x[0]]) < 0) throw new Error('modo_invalido');
+    r.set(x[0], b[x[0]]); mudou.push('modo ' + x[1] + ' ' + (b[x[0]] || 'automático'));
+  });
+  /* padrão só com credencial, conferida depois das mudanças deste mesmo pedido (nada é gravado se falhar) */
+  if (b.provedorAtivo) {
+    const tem = b.provedorAtivo === 'stripe'
+      ? !!(decifrar(r.getString('stripeSecretKey')) || env('STRIPE_SECRET_KEY'))
+      : !!(decifrar(r.getString('mpAccessToken')) || env('MP_ACCESS_TOKEN'));
+    if (!tem) throw new Error('gateway_sem_credencial');
+  }
   if (adminId) r.set('atualizadoPor', adminId);
   app.save(r);
   if (b.googleClientId !== undefined || b.googleClientSecret !== undefined) {
@@ -129,4 +190,4 @@ function gravar(app, b, adminId) {
   return mudou;
 }
 
-module.exports = { ler: ler, resumo: resumo, gravar: gravar, aplicarGoogle: aplicarGoogle, cifrar: cifrar, decifrar: decifrar, PROVEDORES: PROVEDORES };
+module.exports = { ler: ler, resumo: resumo, gravar: gravar, checkoutPublico: checkoutPublico, configurado: configurado, aplicarGoogle: aplicarGoogle, cifrar: cifrar, decifrar: decifrar, PROVEDORES: PROVEDORES };

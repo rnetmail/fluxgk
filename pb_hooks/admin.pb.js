@@ -12,6 +12,8 @@
 ///   GET   /api/fluxgk/admin/eventos?conta=&tipo=
 ///   GET   /api/fluxgk/admin/integracoes                  provedor ativo, chaves (só "definida · final"), Google
 ///   PUT   /api/fluxgk/admin/integracoes                  {provedorAtivo?, urlPublica?, stripeSecretKey?, …, googleClientId?, googleClientSecret?}
+///                                                        feature 003: stripePublicKey?, mpPublicKey?, stripeModo?, mpModo? (transparente|pagina);
+///                                                        o padrão (provedorAtivo) só aceita gateway com credencial → 400 gateway_sem_credencial
 ///   POST  /api/fluxgk/admin/integracoes/testar           {provedor} → confere as credenciais no provedor
 ///   POST  /api/fluxgk/apagar-subarvore                   (técnico) {path}: clube/temporada inteiros, ver fluxgk_subarvore.js
 
@@ -173,6 +175,9 @@ routerAdd('PUT', '/api/fluxgk/admin/integracoes', (e) => {
     const m = String(err && err.message);
     if (m.indexOf('provedor_invalido') >= 0) return e.json(400, { message: 'Provedor inválido.' });
     if (m.indexOf('url_invalida') >= 0) return e.json(400, { message: 'Endereço público inválido.' });
+    if (m.indexOf('gateway_sem_credencial') >= 0) return e.json(400, { message: 'Configure o gateway antes de torná-lo padrão.', data: { codigo: 'gateway_sem_credencial' } });
+    if (m.indexOf('chave_publica_invalida') >= 0) return e.json(400, { message: 'Chave pública inválida para este gateway.', data: { codigo: 'chave_publica_invalida' } });
+    if (m.indexOf('modo_invalido') >= 0) return e.json(400, { message: 'Modo de checkout inválido.', data: { codigo: 'modo_invalido' } });
     throw err;
   }
   /* nunca registra valor de chave no histórico: só o que mudou */

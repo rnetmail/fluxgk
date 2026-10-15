@@ -154,6 +154,20 @@ function tratar(app, tipo, id) {
     const pl = acharPlanoMp(app, s.preapproval_plan_id);
     if (!pl) return { resultado: 'erro', detalhe: 'plano do Mercado Pago desconhecido: ' + s.preapproval_plan_id, assinaturaId: id };
     const conta = acharConta(app, 'assinaturaId', id);
+    if (!conta) {
+      /* feature 003: assinatura do checkout transparente feita por conta logada (external_reference com a conta) */
+      const ref = String(s.external_reference || '').split('|');
+      const dona = ref[0] === 'fluxgk' && ref[3] ? acharConta(app, 'id', ref[3]) : null;
+      if (dona && !acharCodigo(app, 'sessaoPagamento = {:s}', { s: 'mpa_' + id })) {
+        const ateMs = fimPeriodo(Date.now(), pl.ciclo);
+        A.aplicarPlano(dona, pl.plano, ateMs, 'pagamento', { assinaturaId: id });
+        app.save(dona);
+        const g = C.gerar(app, { plano: pl.plano, ciclo: pl.ciclo, origem: 'pagamento', sessaoPagamento: 'mpa_' + id, assinaturaId: id,
+          acessoAte: A.dataPb(ateMs), usadoPor: dona.id, usadoEm: A.dataPb(Date.now()), motivo: 'compra logada' });
+        g.registro.set('codigoClaro', ''); app.save(g.registro);
+        return { resultado: 'ok', detalhe: 'cartão: plano ' + pl.plano + ' aplicado direto (compra logada)', chave: 'mp:sub:' + id, conta: dona.id, assinaturaId: id };
+      }
+    }
     if (conta) {
       if (conta.getString('plano') !== pl.plano) { conta.set('plano', pl.plano); conta.set('modulos', A.modulosDoPlano(pl.plano)); app.save(conta); }
       return { resultado: 'ok', detalhe: 'assinatura autorizada (conta já ligada)', conta: conta.id, assinaturaId: id };
