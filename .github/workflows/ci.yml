@@ -100,7 +100,9 @@ jobs:
 
       - name: Planos (feature 001) — migration sobre contas antigas e volta de versão
         run: |
-          git fetch -q --depth=1 origin main
+          # Versão antiga fixada em 1.2026.003, a última sem os planos. Era `main`, mas desde 1.2026.004 o
+          # `main` já traz a 001 e a comparação deixou de testar contas antigas.
+          git fetch -q --depth=1 origin refs/tags/1.2026.003
           mkdir -p /tmp/antiga && git archive FETCH_HEAD | tar -x -C /tmp/antiga
           docker build -q -f /tmp/antiga/Dockerfile.pocketbase -t fluxgk-pb-antiga /tmp/antiga
           sh tools/test-planos-migracao.sh fluxgk-pb-ci fluxgk-pb-antiga
