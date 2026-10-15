@@ -225,6 +225,39 @@ function assinaturaDaFatura(f) {
 /** Primeiro acesso depois da compra: um ciclo + 1 dia de folga; a fatura paga corrige para o fim exato. */
 function ateInicial(ciclo) { return Date.now() + ((ciclo === 'anual' ? 366 : 32) * 86400 * 1000); }
 
+/** Feature 003: a 1ª fatura paga de uma assinatura criada pelo checkout transparente (metadata `sessao = st_…`) gera o
+ *  código (compra anônima) ou aplica o plano e liga a assinatura (compra logada). Devolve null quando não é o caso. */
+function primeiraFaturaTransparente(app, o, sub, ateMs) {
+  if (o.billing_reason !== 'subscription_create') return null;
+  let md = (o.subscription_details && o.subscription_details.metadata)
+    || (o.parent && o.parent.subscription_details && o.parent.subscription_details.metadata) || null;
+  if (!md || !md.plano) {
+    try { md = (chamar('GET', '/v1/subscriptions/' + encodeURIComponent(sub)) || {}).metadata || null; } catch (_) { md = null; }
+  }
+  const sessao = String((md && md.sessao) || '');
+  if (!/^st_[a-z0-9]{24}$/.test(sessao)) return null;
+  const A = require(`${__hooks}/fluxgk_acesso.js`);
+  const C = require(`${__hooks}/fluxgk_codigos.js`);
+  let ja = null;
+  try { ja = app.findFirstRecordByFilter('codigos_ativacao', 'sessaoPagamento = {:s}', { s: sessao }); } catch (_) {}
+  if (ja) return null;                                      /* já tratada: segue o caminho normal (estende o prazo) */
+  const plano = String(md.plano || ''), ciclo = md.ciclo === 'anual' ? 'anual' : 'mensal';
+  if (!A.PLANOS[plano]) return { resultado: 'erro', detalhe: 'transparente: assinatura sem plano conhecido: ' + plano, assinaturaId: sub };
+  const cli = idDe(o.customer);
+  const conta = md.conta ? acharConta(app, 'id', String(md.conta)) : null;
+  if (conta) {
+    A.aplicarPlano(conta, plano, ateMs, 'pagamento', { assinaturaId: sub, clientePagamentoId: cli });
+    app.save(conta);
+    const g = C.gerar(app, { plano: plano, ciclo: ciclo, origem: 'pagamento', sessaoPagamento: sessao, assinaturaId: sub,
+      clientePagamentoId: cli, acessoAte: A.dataPb(ateMs), usadoPor: conta.id, usadoEm: A.dataPb(Date.now()), motivo: 'compra logada' });
+    g.registro.set('codigoClaro', ''); app.save(g.registro);
+    return { resultado: 'ok', detalhe: 'transparente: plano ' + plano + ' aplicado direto (compra logada)', conta: conta.id, assinaturaId: sub };
+  }
+  C.gerar(app, { plano: plano, ciclo: ciclo, origem: 'pagamento', sessaoPagamento: sessao, assinaturaId: sub,
+    clientePagamentoId: cli, acessoAte: A.dataPb(ateMs) });
+  return { resultado: 'ok', detalhe: 'transparente: código gerado para o plano ' + plano, assinaturaId: sub };
+}
+
 /** Trata um evento já conferido e ainda não visto. Devolve {resultado, detalhe, conta?, assinaturaId?}. */
 function tratarEvento(app, ev) {
   const A = require(`${__hooks}/fluxgk_acesso.js`);
@@ -262,6 +295,8 @@ function tratarEvento(app, ev) {
       const fimMs = linha && linha.period && linha.period.end ? linha.period.end * 1000 : 0;
       if (!sub || !fimMs) return { resultado: 'ignorado', detalhe: 'fatura sem assinatura ou período' };
       const ateMs = fimMs + 86400 * 1000;                    /* 1 dia de folga para a próxima cobrança cair */
+      const tr = primeiraFaturaTransparente(app, o, sub, ateMs);   /* feature 003: assinatura criada sem sair do site */
+      if (tr) return tr;
       const conta = acharConta(app, 'assinaturaId', sub);
       if (conta) {
         A.estenderAte(conta, ateMs); app.save(conta);

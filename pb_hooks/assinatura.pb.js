@@ -3,6 +3,8 @@
 ///
 ///   GET  /api/fluxgk/planos               público  → planos, módulos, preços e se o pagamento está disponível
 ///   POST /api/fluxgk/checkout             público ou logado {plano, ciclo} → {url} da página de pagamento
+///   POST /api/fluxgk/checkout/transparente público ou logado {plano, ciclo, meio, token?, email?} → cobrança criada no
+///                                         gateway sem sair do site (feature 003, fluxgk_transparente.js)
 ///   GET  /api/fluxgk/codigo?s=<sessão>    público  → estado do código da compra (pronto/aguardando/usado/aplicado)
 ///   POST /api/fluxgk/ativar               logado   {codigo} → plano aplicado na conta
 ///   POST /api/fluxgk/portal               logado   → {url} do portal do cliente (trocar plano, cartão, cancelar)
@@ -28,9 +30,12 @@ routerAdd('GET', '/api/fluxgk/planos', (e) => {
     };
   });
   const prov = P.cfg().provedor;
+  /* feature 003: gateway padrão, modo (transparente | pagina), chave pública e meios. Nenhum segredo. */
+  const ck = require(`${__hooks}/fluxgk_integracoes.js`).checkoutPublico($app);
   return e.json(200, {
     planos: planos, pagamentoDisponivel: P.disponivel() && Object.keys(cfgs).length > 0, provedor: prov || null,
     meios: prov === 'mercadopago' ? ['cartao', 'pix'] : ['automatico'],   /* Stripe: o Checkout mostra cartão e Pix */
+    checkout: ck,
   });
 });
 
@@ -42,11 +47,23 @@ routerAdd('POST', '/api/fluxgk/checkout', (e) => {
   catch (err) { return R.erroJson(e, err); }
 });
 
+routerAdd('POST', '/api/fluxgk/checkout/transparente', (e) => {
+  const R = require(`${__hooks}/fluxgk_rotas.js`);
+  const T = require(`${__hooks}/fluxgk_transparente.js`);
+  const b = e.requestInfo().body || {};
+  const logada = R.contaLogada(e);
+  let conta = null;
+  if (logada) { try { conta = $app.findRecordById('users', logada.id); } catch (_) { conta = null; } }
+  try { return e.json(200, T.criar($app, b, conta, T.ipCliente(e))); }
+  catch (err) { return R.erroJson(e, err); }
+});
+
 routerAdd('GET', '/api/fluxgk/codigo', (e) => {
   const R = require(`${__hooks}/fluxgk_rotas.js`);
   const s = String(e.request.url.query().get('s') || '');
-  /* cs_… = Stripe; mp_<nonce> = Pix do Mercado Pago; mpa_<id> = assinatura no cartão do Mercado Pago */
-  if (!/^(cs_[A-Za-z0-9_]{8,200}|mp_[a-z0-9]{24}|mpa_[A-Za-z0-9-]{8,64})$/.test(s)) return e.json(404, { message: 'Compra não encontrada.' });
+  /* cs_… = Stripe; mp_<nonce> = Pix do Mercado Pago; mpa_<id> = assinatura no cartão do Mercado Pago;
+     st_<nonce> = assinatura da Stripe pelo checkout transparente (feature 003) */
+  if (!/^(cs_[A-Za-z0-9_]{8,200}|mp_[a-z0-9]{24}|mpa_[A-Za-z0-9-]{8,64}|st_[a-z0-9]{24})$/.test(s)) return e.json(404, { message: 'Compra não encontrada.' });
   let r = null;
   try { r = $app.findFirstRecordByFilter('codigos_ativacao', 'sessaoPagamento = {:s}', { s: s }); } catch (_) {}
   if (!r) return e.json(200, { estado: 'aguardando' });

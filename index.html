@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="theme-color" content="#0a0a0a">
 <title>FluxGK</title>
+<meta name="description" content="FluxGK: training load with ACWR, planning, periodization, xG, statistics and match minutes for goalkeeper coaches. Try Advanced free for 14 days.">
+<meta property="og:title" content="FluxGK · Data-Driven GK">
+<meta property="og:description" content="Goalkeeper coaching platform: training load, planning, live match data and video, by club and season.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/icone-512.png">
 
 <!-- ÍCONE E COMPORTAMENTO DE APP
      apple-touch-icon: o que o iPad/iPhone usa em "Adicionar à Tela de Início".
@@ -55,6 +60,96 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 .lbtn{width:100%;padding:13px;background:#fafaf7;color:#0a0a0a;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif}
 .lbtn:disabled{opacity:.5;cursor:default}
 .lfooter{margin-top:24px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#7d7d7d;text-align:center;letter-spacing:.06em}
+
+/* ---------- LANDING (feature 004): a tela de login virou a página principal ----------
+   Uma coluna até 900 px; acima disso, título à esquerda e login à direita. Mesma identidade escura e âmbar do app;
+   Syne só nos títulos. Tudo escopado em #scr-login. */
+#scr-login.lp{--lp-bg:#0a0a0a;--lp-card:#121212;--lp-line:#242424;--lp-ink:#fafaf7;--lp-mute:#a8a8a0;--lp-amber:#E8901A;--lp-green:#4ade80;
+  background:var(--lp-bg);align-items:stretch;justify-content:flex-start;padding:0;overflow-y:auto;overflow-x:hidden;color:var(--lp-ink)}
+.lp a{color:inherit}
+.lp :focus-visible{outline:2px solid var(--lp-amber);outline-offset:2px}
+.lp-in{width:100%;max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.lp-top{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--lp-line)}
+.lp-top .lp-in{display:flex;align-items:center;gap:14px;height:60px}
+.lp-brand{font:800 20px 'Syne',sans-serif;letter-spacing:-.02em;text-decoration:none}
+.lp-brand b{color:var(--lp-amber)}
+.lp-nav{display:none;gap:22px;margin-left:12px;font-size:14px;color:var(--lp-mute)}
+.lp-nav a{text-decoration:none}.lp-nav a:hover{color:var(--lp-ink)}
+.lp-sp{flex:1}
+.lp-lang{background:transparent;color:var(--lp-mute);border:1px solid var(--lp-line);border-radius:7px;padding:6px 8px;font:600 11px 'JetBrains Mono',monospace;cursor:pointer}
+.lp-lang[aria-pressed="true"]{color:var(--lp-ink);border-color:#555}
+.lp-entrar{background:var(--lp-ink);color:#0a0a0a;border:0;border-radius:8px;padding:9px 14px;font:700 14px 'Space Grotesk',sans-serif;cursor:pointer;white-space:nowrap}
+.lp-hero{padding:44px 0 36px}
+.lp-hero .lp-in{display:grid;gap:32px;align-items:start}
+.lp-eyebrow{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--lp-amber);margin-bottom:14px}
+.lp-h1{font:800 clamp(34px,7.4vw,60px)/1.02 'Syne',sans-serif;letter-spacing:-.03em;margin:0 0 18px;text-wrap:balance}
+.lp-h1 em{font-style:normal;color:var(--lp-amber)}
+.lp-lead{font-size:clamp(16px,2.2vw,19px);line-height:1.55;color:#d6d6cf;max-width:58ch;margin:0 0 26px}
+.lp-ctas{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.lp-cta{background:var(--lp-amber);color:#0a0a0a;border:0;border-radius:10px;padding:15px 22px;font:700 16px 'Space Grotesk',sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.lp-cta2{background:transparent;color:var(--lp-ink);border:1px solid #444;border-radius:10px;padding:14px 20px;font:600 16px 'Space Grotesk',sans-serif;text-decoration:none;display:inline-flex;align-items:center}
+.lp-risk{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--lp-mute);list-style:none;padding:0;margin:0}
+.lp-risk li:before{content:'✓ ';color:var(--lp-green);font-weight:700}
+#scr-login.lp .lwrap{max-width:420px;width:100%;scroll-margin-top:76px}
+#scr-login.lp .lcard{background:var(--lp-card);border-color:var(--lp-line)}
+.lp-legal{font-size:11px;color:var(--lp-mute);text-align:center;margin-top:12px;line-height:1.5}
+.lp-legal a{color:#d6d6cf}
+.lp-sec{padding:56px 0;border-top:1px solid var(--lp-line)}
+.lp-h2{font:800 clamp(26px,4.6vw,38px)/1.08 'Syne',sans-serif;letter-spacing:-.02em;margin:0 0 12px;text-wrap:balance}
+.lp-sub{color:var(--lp-mute);font-size:16px;line-height:1.55;max-width:62ch;margin:0 0 28px}
+.lp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.lp-card{background:var(--lp-card);border:1px solid var(--lp-line);border-radius:14px;padding:20px;min-width:0}
+.lp-card h3{font-size:17px;margin:0 0 8px}
+.lp-card p{color:var(--lp-mute);font-size:14px;line-height:1.55;margin:0}
+.lp-tag{font:600 10px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--lp-amber);margin-bottom:10px;display:block}
+.lp-demo{background:var(--lp-card);border:1px solid var(--lp-line);border-radius:16px;padding:18px;overflow:hidden}
+.lp-demo svg{display:block;width:100%;height:auto}
+.lp-demo-cap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 11px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--lp-mute);margin-bottom:10px}
+.lp-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.lp-chip{border:1px solid var(--lp-line);border-radius:10px;padding:10px 12px;min-width:0}
+.lp-chip b{display:block;font:700 22px 'JetBrains Mono',monospace;letter-spacing:-.02em}
+.lp-chip span{font-size:11px;color:var(--lp-mute)}
+.lp-mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
+.lp-mod{border:1px solid var(--lp-line);border-radius:12px;padding:14px 16px;min-width:0}
+.lp-mod b{display:block;font-size:15px;margin-bottom:4px}
+.lp-mod span{font-size:13px;color:var(--lp-mute);line-height:1.45}
+.lp-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px;counter-reset:passo;list-style:none;padding:0;margin:0}
+.lp-steps li{counter-increment:passo;background:var(--lp-card);border:1px solid var(--lp-line);border-radius:14px;padding:20px;min-width:0}
+.lp-steps li:before{content:counter(passo);font:800 30px 'Syne',sans-serif;color:var(--lp-amber);display:block;margin-bottom:8px}
+.lp-steps b{display:block;font-size:16px;margin-bottom:6px}
+.lp-steps span{color:var(--lp-mute);font-size:14px;line-height:1.5}
+.lp-plan{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between;background:linear-gradient(120deg,#1a1206,#121212 60%);border:1px solid #3a2a10;border-radius:16px;padding:24px}
+.lp-plan-p{font:700 clamp(26px,5vw,34px) 'JetBrains Mono',monospace;letter-spacing:-.02em}
+.lp-plan-p small{font-size:14px;color:var(--lp-mute);font-weight:400}
+.lp-faq{display:flex;flex-direction:column;gap:10px;max-width:780px}
+.lp-faq details{border:1px solid var(--lp-line);border-radius:12px;padding:0 16px;background:var(--lp-card)}
+.lp-faq summary{cursor:pointer;padding:16px 0;font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.lp-faq summary::-webkit-details-marker{display:none}
+.lp-faq summary:after{content:'+';color:var(--lp-amber);font-weight:700}
+.lp-faq details[open] summary:after{content:'−'}
+.lp-faq p{color:var(--lp-mute);font-size:14px;line-height:1.6;margin:0 0 16px}
+.lp-final{text-align:center}
+.lp-final .lp-ctas{justify-content:center}
+.lp-foot{border-top:1px solid var(--lp-line);padding:26px 0 calc(110px + env(safe-area-inset-bottom,0px));font-size:13px;color:var(--lp-mute)}
+.lp-foot .lp-in{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:space-between}
+.lp-foot nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.lp-foot .lfooter{margin:0;text-align:left}
+.lp-cookie{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px max(16px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px));background:#161616;border-top:1px solid #333}
+.lp-cookie[hidden]{display:none}
+.lp-cookie .lp-cin{max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.lp-cookie p{margin:0;font-size:13px;line-height:1.5;color:#d6d6cf;flex:1 1 320px;min-width:0}
+.lp-cookie .lp-cbt{display:flex;gap:10px;align-items:center}
+.lp-cookie button{background:var(--lp-ink);color:#0a0a0a;border:0;border-radius:8px;padding:9px 16px;font:700 14px 'Space Grotesk',sans-serif;cursor:pointer}
+@media (min-width:900px){
+  .lp-nav{display:flex}
+  .lp-hero{padding:72px 0 56px}
+  .lp-hero .lp-in{grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:56px}
+  #scr-login.lp .lwrap{justify-self:end;margin-top:6px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .lp-cta,.lp-cta2,.lp-entrar{transition:transform .15s ease,background .15s}
+  .lp-cta:hover{transform:translateY(-1px);background:#f59e2c}
+}
 
 /* ---------- HOME ---------- */
 #scr-home{background:var(--paper)}
@@ -125,6 +220,14 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 .pinfo{font-size:13px;color:var(--ink);margin-bottom:10px;line-height:1.5}
 .prow{display:flex;gap:8px;flex-wrap:wrap}
 .prow .fi{flex:1 1 140px;margin-bottom:8px;min-width:0}
+/* feature 003: cards de gateway em Planos e pagamento */
+.gw{border:1px solid var(--faint);border-radius:11px;padding:14px;margin:0 0 12px;background:#fff}
+.gwh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.gwn{font-weight:700;font-size:15px;color:var(--ink)}
+.gwp{font:600 10px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 9px;border:1px solid var(--faint);color:var(--mute)}
+.gwp.ok{border-color:#16a34a;color:#15803d}
+.gwp.pad{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.gwr{display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 12px;color:var(--ink)}
 .prow .btn{flex:0 0 auto;width:auto;padding:11px 14px;margin-top:0}
 .btsec{background:#fff;color:var(--ink);border:1px solid var(--faint)}
 .plista{font-size:12px;border:1px solid var(--faint);border-radius:9px;max-height:260px;overflow:auto;margin-bottom:12px}
@@ -219,9 +322,40 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
 
 <div class="screen active" id="scr-loading"><div class="ldots"><i></i><i></i><i></i></div></div>
 
-<div class="screen" id="scr-login">
-  <div class="lwrap">
-    <div class="llogo"><div class="lbrand">FluxGK</div><div class="lsub" data-i18n="hub.tagline">Data-Driven GK</div></div>
+<div class="screen lp" id="scr-login">
+  <!-- Feature 004: landing page. O cartão de login é o de antes (mesmos ids: doLogin, mostrarGoogle e
+       doLoginGoogle não mudaram); o resto é a apresentação do produto. Só afirma o que o app faz hoje. -->
+  <header class="lp-top"><div class="lp-in">
+    <a class="lp-brand" href="#lp-inicio" aria-label="FluxGK">Flux<b>GK</b></a>
+    <nav class="lp-nav" aria-label="Seções" data-i18n-aria="lp.navAria">
+      <a href="#lp-modulos" data-i18n="lp.nav.modules">Modules</a>
+      <a href="#lp-como" data-i18n="lp.nav.how">How it works</a>
+      <a href="/planos.html" data-i18n="lp.nav.plans">Plans</a>
+      <a href="#lp-faq" data-i18n="lp.nav.faq">FAQ</a>
+    </nav>
+    <span class="lp-sp"></span>
+    <button type="button" class="lp-lang" id="lp-lang-pt" onclick="lpLang('pt')">PT</button>
+    <button type="button" class="lp-lang" id="lp-lang-en" onclick="lpLang('en')">EN</button>
+    <button type="button" class="lp-entrar" onclick="lpEntrar()" data-i18n="common.signIn">Sign in</button>
+  </div></header>
+
+  <main>
+  <section class="lp-hero" id="lp-inicio"><div class="lp-in">
+    <div>
+      <div class="lp-eyebrow" data-i18n="lp.eyebrow">For goalkeeper coaches</div>
+      <h1 class="lp-h1" data-i18n="lp.h1" data-i18n-html>From training to match day, <em>every goalkeeper measured.</em></h1>
+      <p class="lp-lead" data-i18n="lp.lead">Training load with ACWR, planning and periodization, xG, statistics and match minutes logged live, with voice dictation. All in one place, by club and by season.</p>
+      <div class="lp-ctas">
+        <button type="button" class="lp-cta" onclick="lpTeste()" data-i18n="lp.ctaTrial">Start your 14-day free trial</button>
+        <a class="lp-cta2" href="/planos.html" data-i18n="lp.ctaPlans">See plans</a>
+      </div>
+      <ul class="lp-risk">
+        <li data-i18n="lp.risk1">No card for the trial</li>
+        <li data-i18n="lp.risk2">Cancel anytime</li>
+        <li data-i18n="lp.risk3">Full refund within 7 days</li>
+      </ul>
+    </div>
+    <div class="lwrap" id="lp-login">
     <div class="lcard">
       <div class="lt" data-i18n="common.signIn">Sign in</div>
       <div class="lts" data-i18n="hub.loginSub">Goalkeeper Coach Platform</div>
@@ -236,9 +370,120 @@ html,body{height:100%;background:#0a0a0a;font-family:'Space Grotesk',sans-serif;
         <div class="lou" style="font-size:11px;margin-top:10px" data-i18n="legal.byContinuing">By continuing you agree to the Terms and the Privacy Policy.</div>
       </div>
     </div>
-    <div class="lfooter"><a href="/planos.html" style="color:inherit" data-i18n="plano.seePlans">See plans</a> · <a href="/termos.html" style="color:inherit" data-i18n="legal.terms">Terms</a> · <a href="/privacidade.html" style="color:inherit" data-i18n="legal.privacy">Privacy</a></div>
-    <div class="lfooter" data-i18n="hub.footer">FluxGK · Data-Driven GK</div>
-    <div class="lfooter" id="app-versao" style="margin-top:6px"></div>
+      <div class="lp-legal"><span data-i18n="lp.legalPre">By continuing you agree to the</span> <a href="/termos.html" data-i18n="legal.terms">Terms of use</a> <span data-i18n="lp.and">and the</span> <a href="/privacidade.html" data-i18n="legal.privacy">Privacy Policy</a>.</div>
+    </div>
+  </div></section>
+
+  <section class="lp-sec" aria-labelledby="lp-h-demo"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-demo" data-i18n="lp.demoTitle">See the load before you decide the session.</h2>
+    <p class="lp-sub" data-i18n="lp.demoSub">Acute and chronic load per goalkeeper, with the safe zone marked. The numbers below are an example.</p>
+    <div class="lp-demo">
+      <div class="lp-demo-cap"><span data-i18n="lp.demoCap">Load Control · ACWR · 8 weeks</span><span data-i18n="lp.example">Example</span></div>
+      <svg viewBox="0 0 640 220" role="img" aria-labelledby="lp-svg-t"><title id="lp-svg-t">ACWR</title>
+        <rect x="40" y="62" width="584" height="70" fill="#4ade80" opacity=".08"/>
+        <line x1="40" y1="62" x2="624" y2="62" stroke="#4ade80" stroke-opacity=".35" stroke-dasharray="4 5"/>
+        <line x1="40" y1="132" x2="624" y2="132" stroke="#4ade80" stroke-opacity=".35" stroke-dasharray="4 5"/>
+        <text x="34" y="66" fill="#a8a8a0" font-size="11" text-anchor="end" font-family="JetBrains Mono,monospace">1.3</text>
+        <text x="34" y="136" fill="#a8a8a0" font-size="11" text-anchor="end" font-family="JetBrains Mono,monospace">0.8</text>
+        <g fill="#2a2a2a">
+          <rect x="58" y="150" width="46" height="50" rx="3"/><rect x="131" y="138" width="46" height="62" rx="3"/><rect x="204" y="128" width="46" height="72" rx="3"/><rect x="277" y="120" width="46" height="80" rx="3"/>
+          <rect x="350" y="104" width="46" height="96" rx="3"/><rect x="423" y="92" width="46" height="108" rx="3"/><rect x="496" y="126" width="46" height="74" rx="3"/><rect x="569" y="134" width="46" height="66" rx="3"/>
+        </g>
+        <polyline fill="none" stroke="#E8901A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="81,120 154,108 227,98 300,90 373,70 446,46 519,84 592,100"/>
+        <g fill="#E8901A"><circle cx="81" cy="120" r="4"/><circle cx="154" cy="108" r="4"/><circle cx="227" cy="98" r="4"/><circle cx="300" cy="90" r="4"/><circle cx="373" cy="70" r="4"/><circle cx="446" cy="46" r="6" fill="#f87171"/><circle cx="519" cy="84" r="4"/><circle cx="592" cy="100" r="5"/></g>
+        <text x="446" y="34" fill="#f87171" font-size="12" text-anchor="middle" font-family="JetBrains Mono,monospace">1.46</text>
+      </svg>
+      <div class="lp-chips">
+        <div class="lp-chip"><b>1.07</b><span data-i18n="lp.chip1">ACWR this week</span></div>
+        <div class="lp-chip"><b>0.38</b><span data-i18n="lp.chip2">xG prevented, last match</span></div>
+        <div class="lp-chip"><b>90'</b><span data-i18n="lp.chip3">Minutes, last match</span></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section class="lp-sec" aria-labelledby="lp-h-valor"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-valor" data-i18n="lp.valueTitle">What changes in your routine</h2>
+    <p class="lp-sub" data-i18n="lp.valueSub">Less spreadsheet, less paper on the bench, more time with the goalkeepers.</p>
+    <div class="lp-grid">
+      <div class="lp-card"><span class="lp-tag" data-i18n="lp.v1tag">Training</span><h3 data-i18n="lp.v1t">Load under control</h3><p data-i18n="lp.v1">Log the load of every session and see each goalkeeper's ACWR before choosing the next one.</p></div>
+      <div class="lp-card"><span class="lp-tag" data-i18n="lp.v2tag">Match day</span><h3 data-i18n="lp.v2t">Live match, no paper</h3><p data-i18n="lp.v2">Record shots, saves, xG and minutes during the match. Speak your note and dictation types it.</p></div>
+      <div class="lp-card"><span class="lp-tag" data-i18n="lp.v3tag">Season</span><h3 data-i18n="lp.v3t">A planned season</h3><p data-i18n="lp.v3">Build sessions from your exercise library and fit each one into macro, meso and microcycles.</p></div>
+    </div>
+  </div></section>
+
+  <section class="lp-sec" id="lp-modulos" aria-labelledby="lp-h-mod"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-mod" data-i18n="lp.modTitle">Nine modules, one goalkeeper record</h2>
+    <p class="lp-sub" data-i18n="lp.modSub">Each plan unlocks a set of modules. Your data stays when you change plans.</p>
+    <div class="lp-mods">
+      <div class="lp-mod"><b data-i18n="hub.mod.data">Load Control</b><span data-i18n="hub.mod.data.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.planner">GK Planner</b><span data-i18n="hub.mod.planner.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.period">Periodization</b><span data-i18n="hub.mod.period.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.profile">GK Profile</b><span data-i18n="hub.mod.profile.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.minutes">GK Minutes</b><span data-i18n="hub.mod.minutes.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.xg">xG System</b><span data-i18n="hub.mod.xg.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.stats">GK Statistics</b><span data-i18n="hub.mod.stats.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.video">Video Lab</b><span data-i18n="hub.mod.video.d"></span></div>
+      <div class="lp-mod"><b data-i18n="hub.mod.scouting">Scouting</b><span data-i18n="hub.mod.scouting.d"></span></div>
+    </div>
+  </div></section>
+
+  <section class="lp-sec" id="lp-como" aria-labelledby="lp-h-como"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-como" data-i18n="lp.howTitle">Up and running in three steps</h2>
+    <ol class="lp-steps">
+      <li><b data-i18n="lp.s1t">Choose how to start</b><span data-i18n="lp.s1">Free trial with your Google account, or a plan paid by card or Pix.</span></li>
+      <li><b data-i18n="lp.s2t">Sign in</b><span data-i18n="lp.s2">The plan unlocks its modules right away. If you bought before signing in, enter your activation code.</span></li>
+      <li><b data-i18n="lp.s3t">Add club and season</b><span data-i18n="lp.s3">Your squad and your data, kept apart from every other coach.</span></li>
+    </ol>
+  </div></section>
+
+  <section class="lp-sec" aria-labelledby="lp-h-plan"><div class="lp-in">
+    <div class="lp-plan">
+      <div>
+        <h2 class="lp-h2" id="lp-h-plan" style="margin-bottom:6px" data-i18n="lp.planTitle">Plans for every stage</h2>
+        <div class="lp-sub" style="margin:0" data-i18n="lp.planSub">Basic, Intermediate, Advanced and Pro. Monthly or yearly.</div>
+      </div>
+      <div class="lp-plan-p" id="lp-preco" aria-live="polite"></div>
+      <a class="lp-cta" href="/planos.html" data-i18n="lp.ctaPlans">See plans</a>
+    </div>
+  </div></section>
+
+  <section class="lp-sec" id="lp-faq" aria-labelledby="lp-h-faq"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-faq" data-i18n="lp.faqTitle">Questions</h2>
+    <div class="lp-faq">
+      <details><summary data-i18n="lp.q1">How does the free trial work?</summary><p data-i18n="lp.a1">Sign in with your Google account and use the Advanced plan for 14 days, with no card. Then choose a plan to keep going.</p></details>
+      <details><summary data-i18n="lp.q2">How can I pay?</summary><p data-i18n="lp.a2">Credit card, which renews automatically, or Pix, paid per period. Payment goes through the payment provider: FluxGK never sees or stores your card.</p></details>
+      <details><summary data-i18n="lp.q3">Can I cancel?</summary><p data-i18n="lp.a3">Anytime. On your first purchase, you get a full refund within 7 days. After that, access continues until the end of the paid period.</p></details>
+      <details><summary data-i18n="lp.q4">Is my data safe?</summary><p data-i18n="lp.a4">Each coach sees only their own data. Changing plans or letting a plan expire deletes nothing, and you can delete your account whenever you want.</p></details>
+      <details><summary data-i18n="lp.q5">Which devices does it run on?</summary><p data-i18n="lp.a5">In the browser on computer, tablet and phone, and it can be installed as an app.</p></details>
+    </div>
+  </div></section>
+
+  <section class="lp-sec lp-final" aria-labelledby="lp-h-fim"><div class="lp-in">
+    <h2 class="lp-h2" id="lp-h-fim" data-i18n="lp.finalTitle">Start your next session with data.</h2>
+    <p class="lp-sub" style="margin-left:auto;margin-right:auto" data-i18n="lp.finalSub">14 days of the Advanced plan, free, no card.</p>
+    <div class="lp-ctas">
+      <button type="button" class="lp-cta" onclick="lpTeste()" data-i18n="lp.ctaTrial">Start your 14-day free trial</button>
+      <button type="button" class="lp-cta2" onclick="lpEntrar()" data-i18n="lp.haveAccount">I already have an account</button>
+    </div>
+  </div></section>
+  </main>
+
+  <footer class="lp-foot"><div class="lp-in">
+    <div><span class="lp-brand" style="font-size:16px">Flux<b>GK</b></span> · <span data-i18n="hub.tagline">Data-Driven GK</span></div>
+    <nav aria-label="Legal" data-i18n-aria="lp.legalAria">
+      <a href="/planos.html" data-i18n="plano.seePlans">See plans</a>
+      <a href="/termos.html" data-i18n="legal.terms">Terms of use</a>
+      <a href="/privacidade.html" data-i18n="legal.privacy">Privacy Policy</a>
+      <button type="button" onclick="lpCookieMostra()" style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:underline" data-i18n="lp.cookieLink">Cookies</button>
+    </nav>
+    <div class="lfooter" id="app-versao"></div>
+  </div></footer>
+
+  <div class="lp-cookie" id="lp-cookie" hidden role="region" aria-label="Cookies" data-i18n-aria="lp.cookieAria">
+    <div class="lp-cin">
+      <p data-i18n="lp.cookieText">We only use essential local storage: keeping you signed in, remembering your language and saving your work offline. No advertising or tracking cookies.</p>
+      <div class="lp-cbt"><a href="/privacidade.html" data-i18n="legal.privacy">Privacy Policy</a><button type="button" onclick="lpCookieOk()" data-i18n="lp.cookieOk">Got it</button></div>
+    </div>
   </div>
 </div>
 
@@ -1076,6 +1321,7 @@ async function boot(){
         document.getElementById('lbtn').disabled=false;
         document.getElementById('lbtn').textContent=TX('common.signIn');
         mostrarGoogle();
+        lpIniciar();
         showScreen('login');
       }
     });
@@ -1239,6 +1485,44 @@ function mostrarGoogle(){
     box.style.display=tem?'block':'none';
   }).catch(function(){});
 }
+/* ---------- LANDING (feature 004) ---------- */
+function lpEntrar(){
+  var w=document.getElementById('lp-login'),e=document.getElementById('inp-email');
+  if(w)w.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  if(e)setTimeout(function(){e.focus({preventScroll:true});},350);
+}
+function lpTeste(){
+  var g=document.getElementById('lgoogle-box');
+  if(g&&g.style.display==='block'){doLoginGoogle();return;}     /* teste de 14 dias = 1º login Google (RN-P05) */
+  location.href='/planos.html';
+}
+function lpLang(l){FluxGKI18n.setLang(l);lpMarcaLang();lpPreco();}
+function lpMarcaLang(){
+  var l=FluxGKI18n.getLang();
+  ['pt','en'].forEach(function(x){var b=document.getElementById('lp-lang-'+x);if(b)b.setAttribute('aria-pressed',x===l?'true':'false');});
+  document.documentElement.lang=l==='pt'?'pt-BR':'en';
+}
+var _LP_MIN=null;
+function lpPreco(){
+  var el=document.getElementById('lp-preco');if(!el)return;
+  if(!_LP_MIN){el.textContent='';return;}
+  var v;try{v=(_LP_MIN/100).toLocaleString(FluxGKI18n.getLang()==='pt'?'pt-BR':'en-GB',{style:'currency',currency:'BRL'});}catch(e){v='R$ '+(_LP_MIN/100).toFixed(2);}
+  el.innerHTML='<small>'+_escV(TX('lp.from'))+'</small> '+_escV(v)+'<small>'+_escV(TX('pg.perMonth'))+'</small>';
+}
+function lpCarregaPrecos(){
+  fetch('/api/fluxgk/planos').then(function(r){return r.ok?r.json():null;}).then(function(j){
+    var ms=((j&&j.planos)||[]).map(function(p){return p.mensalCentavos;}).filter(function(c){return c>0;});
+    _LP_MIN=ms.length?Math.min.apply(null,ms):null;lpPreco();
+  }).catch(function(){});
+}
+/* aviso de cookies: só armazenamento essencial; o "Entendi" fica no localStorage, sem cookie e sem servidor */
+function lpCookieOk(){try{localStorage.setItem('fluxgk_cookies_ok',new Date().toISOString());}catch(e){}document.getElementById('lp-cookie').hidden=true;}
+function lpCookieMostra(){document.getElementById('lp-cookie').hidden=false;}
+function lpIniciar(){
+  lpMarcaLang();lpCarregaPrecos();
+  var ok=null;try{ok=localStorage.getItem('fluxgk_cookies_ok');}catch(e){}
+  if(!ok)lpCookieMostra();
+}
 function doLoginGoogle(){
   var er=document.getElementById('lerr'),bt=document.getElementById('lgoogle');
   er.textContent='';bt.disabled=true;
@@ -1256,13 +1540,20 @@ async function carregarAssinaturas(){
   try{contas=await pb.send('/api/fluxgk/admin/contas',{method:'GET'});}
   catch(e){box.style.display='none';return;}            /* 403: não é admin */
   box.style.display='block';
+  _contasUi(contas);
   carregarIntegracoes();
-  var precos=PLANO.planos.map(function(p){
+}
+/* valores dos planos (feature 003: moram em Planos e pagamento, junto com os gateways) */
+function _precosUi(){
+  return PLANO.planos.map(function(p){
     return '<div class="prow"><span class="fl" style="flex:0 0 100%;margin:6px 0 2px">'+_escV(planoNome(p.plano))+'</span>'
       +'<input class="fi" id="pr-m-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.monthly'))+'" value="'+(p.mensalCentavos!=null?(p.mensalCentavos/100).toFixed(2):'')+'">'
       +'<input class="fi" id="pr-a-'+p.plano+'" inputmode="decimal" placeholder="'+_escV(TX('assin.yearly'))+'" value="'+(p.anualCentavos!=null?(p.anualCentavos/100).toFixed(2):'')+'">'
       +'<button class="btn btsec" onclick="salvarPreco(\''+p.plano+'\')">'+_escV(TX('common.save'))+'</button></div>';
   }).join('');
+}
+function _contasUi(contas){
+  var corpo=document.getElementById('s-assin-corpo');
   var opts=PLANO.planos.map(function(p){return '<option value="'+p.plano+'">'+_escV(planoNome(p.plano))+'</option>';}).join('');
   corpo.innerHTML=
      '<div class="fl">'+_escV(TX('assin.accounts'))+'</div>'
@@ -1278,8 +1569,7 @@ async function carregarAssinaturas(){
     +'<div id="cg-saida"></div>'
     +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.newAccount'))+'</div>'
     +'<div class="prow"><input class="fi" id="nc-email" type="email" placeholder="email@clube.com"><input class="fi" id="nc-senha" type="text" autocomplete="off" placeholder="'+_escV(TX('assin.password'))+'"></div>'
-    +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>'
-    +'<div class="fl" style="margin-top:16px">'+_escV(TX('assin.prices'))+'</div>'+precos;
+    +'<div class="prow"><select class="fi" id="nc-plano">'+opts+'</select><input class="fi" id="nc-dias" inputmode="numeric" placeholder="'+_escV(TX('assin.days'))+'"><button class="btn btp" onclick="criarConta()">'+_escV(TX('assin.create'))+'</button></div>';
 }
 /* ---------- INTEGRAÇÕES (Admin): provedor ativo, chaves cifradas no servidor, Google ----------
    O servidor nunca devolve chave em claro: a tela mostra "definida · final XXXX". Campo vazio = mantém. */
@@ -1294,33 +1584,54 @@ async function carregarIntegracoes(){
   var box=document.getElementById('s-integ'),pb=_pbV();if(!box||!pb)return;
   try{_INTEG=await pb.send('/api/fluxgk/admin/integracoes',{method:'GET'});}catch(e){box.innerHTML='';return;}
   var d=_INTEG,u=d.urlPublica||location.origin;
-  var radio=function(v,rot){return '<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:6px"><input type="radio" name="integ-prov" value="'+v+'"'+(d.provedorAtivo===v?' checked':'')+'> '+_escV(rot)+'</label>';};
-  box.innerHTML='<div class="fl">'+_escV(TX('assin.integ'))+'</div>'
+  /* feature 003: Planos e pagamento = valores + cadastro de gateways (chave pública, segredos, modo, padrão) + Google */
+  var gws=(d.gateways||[]).map(function(g){
+    var pre=g.id==='stripe'?'stripe':'mp';
+    var pill=g.padrao?'<span class="gwp pad">'+_escV(TX('assin.gw.default'))+'</span>'
+      :(g.configurado?'<span class="gwp ok">'+_escV(TX('assin.gw.ready'))+'</span>':'<span class="gwp">'+_escV(TX('assin.gw.notReady'))+'</span>');
+    var seg=g.id==='stripe'
+      ?_segredoUi('ig-stripeSecretKey',TX('assin.secretKey'),g.segredos.chave)+_segredoUi('ig-stripeWebhookSecret',TX('assin.webhookSecret'),g.segredos.segredoWebhook)
+      :_segredoUi('ig-mpAccessToken',TX('assin.accessToken'),g.segredos.token)+_segredoUi('ig-mpWebhookSecret',TX('assin.webhookSecret'),g.segredos.segredoWebhook);
+    return '<div class="gw" id="gw-'+g.id+'"><div class="gwh"><span class="gwn">'+_escV(g.nome)+'</span>'+pill+'</div>'
+      +'<label class="gwr"><input type="radio" name="integ-prov" value="'+g.id+'"'+(g.padrao?' checked':'')+'> '+_escV(TX('assin.gw.useDefault'))+'</label>'
+      +'<label class="fl" for="ig-'+pre+'PublicKey">'+_escV(TX('assin.gw.publicKey'))+'</label>'
+      +'<input class="fi" id="ig-'+pre+'PublicKey" autocomplete="off" spellcheck="false" value="'+_escV(g.chavePublica||'')+'" placeholder="'+(g.id==='stripe'?'pk_test_…':'TEST-…')+'">'
+      +seg
+      +'<label class="fl" for="ig-'+pre+'Modo">'+_escV(TX('assin.gw.mode'))+'</label>'
+      +'<select class="fi" id="ig-'+pre+'Modo"><option value="transparente"'+(g.modo==='transparente'?' selected':'')+'>'+_escV(TX('assin.gw.transparent'))+'</option>'
+      +'<option value="pagina"'+(g.modo==='pagina'?' selected':'')+'>'+_escV(TX('assin.gw.hosted'))+'</option></select>'
+      +'<div class="pinfo" style="font-size:12px">'+_escV(TX(g.id==='stripe'?'assin.gw.methodsStripe':'assin.gw.methodsMp'))+'</div>'
+      +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(g.webhook||'')+'</code></div>'
+      +'<button class="btn btsec" onclick="testarIntegracao(\''+g.id+'\')">'+_escV(TX('assin.test'))+' '+_escV(g.nome)+'</button></div>';
+  }).join('');
+  box.innerHTML='<div class="fl">'+_escV(TX('assin.payTitle'))+'</div>'
     +(d.cifra?'':'<div class="pfaixa pvenc" style="display:block">'+_escV(TX('assin.noCipher'))+'</div>')
-    +'<div class="pinfo">'+_escV(TX('assin.activeProvider'))+'</div>'+radio('stripe','Stripe')+radio('mercadopago','Mercado Pago')
+    +'<div class="sect" style="margin-top:6px">'+_escV(TX('assin.prices'))+'</div>'
+    +'<div class="pinfo" style="font-size:12px">'+_escV(TX('assin.pricesHint'))+'</div>'+_precosUi()
+    +'<div class="sect" style="margin-top:16px">'+_escV(TX('assin.gw.title'))+'</div>'
+    +'<div class="pinfo">'+_escV(TX('assin.activeProvider'))+'</div>'+gws
     +'<label class="fl" for="ig-url" style="margin-top:10px">'+_escV(TX('assin.publicUrl'))+'</label><input class="fi" id="ig-url" value="'+_escV(d.urlPublica||'')+'" placeholder="'+_escV(location.origin)+'">'
-    +'<div class="sect" style="margin-top:6px">Stripe</div>'
-    +_segredoUi('ig-stripeSecretKey',TX('assin.secretKey'),d.stripe.chave)+_segredoUi('ig-stripeWebhookSecret',TX('assin.webhookSecret'),d.stripe.segredoWebhook)
-    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook')+'</code></div>'
-    +'<button class="btn btsec" onclick="testarIntegracao(\'stripe\')">'+_escV(TX('assin.test'))+' Stripe</button>'
-    +'<div class="sect" style="margin-top:16px">Mercado Pago</div>'
-    +_segredoUi('ig-mpAccessToken',TX('assin.accessToken'),d.mercadopago.token)+_segredoUi('ig-mpWebhookSecret',TX('assin.webhookSecret'),d.mercadopago.segredoWebhook)
-    +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.webhookUrl'))+' <code>'+_escV(u+'/api/fluxgk/pagamento/webhook-mp')+'</code></div>'
-    +'<button class="btn btsec" onclick="testarIntegracao(\'mercadopago\')">'+_escV(TX('assin.test'))+' Mercado Pago</button>'
     +'<div class="sect" style="margin-top:16px">Google</div>'
     +'<div class="pinfo">'+_escV(d.google.ligado?TX('assin.googleOn'):TX('assin.googleOff'))+'</div>'
     +'<label class="fl" for="ig-googleClientId">Client ID</label><input class="fi" id="ig-googleClientId" value="'+_escV(d.google.clientId||'')+'">'
     +_segredoUi('ig-googleClientSecret','Client Secret',d.google.segredoDefinido?{definida:true,final:'',origem:'tela'}:null)
     +'<div class="pinfo" style="font-size:12px;overflow-wrap:anywhere">'+_escV(TX('assin.redirectUrl'))+' <code>'+_escV(u+'/api/oauth2-redirect')+'</code></div>'
     +'<div id="ig-st" class="pinfo" aria-live="polite"></div>'
-    +'<button class="btn btp" onclick="salvarIntegracoes()">'+_escV(TX('assin.saveInteg'))+'</button>';
+    +'<button class="btn btp" onclick="salvarIntegracoes()">'+_escV(TX('assin.saveInteg'))+'</button>'
+    +'<div class="sec" style="margin-top:18px"></div>';
 }
 async function salvarIntegracoes(){
   var b={},el=function(i){return document.getElementById(i);};
+  var gw=function(id){return (_INTEG.gateways||[]).filter(function(g){return g.id===id;})[0]||{};};
   var r=document.querySelector('input[name="integ-prov"]:checked');if(r&&r.value!==_INTEG.provedorAtivo)b.provedorAtivo=r.value;
   if(el('ig-url').value.trim()!==(_INTEG.urlPublica||''))b.urlPublica=el('ig-url').value.trim();
   ['stripeSecretKey','stripeWebhookSecret','mpAccessToken','mpWebhookSecret','googleClientSecret'].forEach(function(k){var v=el('ig-'+k).value.trim();if(v)b[k]=v;});
   if(el('ig-googleClientId').value.trim()!==(_INTEG.google.clientId||''))b.googleClientId=el('ig-googleClientId').value.trim();
+  [['stripe','stripe'],['mp','mercadopago']].forEach(function(x){
+    var g=gw(x[1]),pk=el('ig-'+x[0]+'PublicKey'),md=el('ig-'+x[0]+'Modo');
+    if(pk&&pk.value.trim()!==(g.chavePublica||''))b[x[0]+'PublicKey']=pk.value.trim();
+    if(md&&md.value!==g.modo)b[x[0]+'Modo']=md.value;
+  });
   if(!Object.keys(b).length){showToast(TX('assin.nothing'));return;}
   try{var d=await _pbV().send('/api/fluxgk/admin/integracoes',{method:'PUT',body:b});
     showToast(d.aviso||TX('assin.integSaved'),4000);await carregarPlano();carregarIntegracoes();
@@ -1401,8 +1712,14 @@ async function criarConta(){
   try{await _pbV().send('/api/fluxgk/admin/contas',{method:'POST',body:b});showToast(_txa('created',{e:b.email}),4000);carregarAssinaturas();}
   catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
 }
+/* "49,90", "49.90", "R$ 1.234,56" → centavos (feature 003). Com vírgula, o ponto é separador de milhar. */
+function _centavos(txt){
+  var v=String(txt||'').replace(/R\$|\s/g,'');
+  if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');
+  var n=Number(v);return v&&isFinite(n)?Math.round(n*100):NaN;
+}
 async function salvarPreco(p){
-  var c=function(id){var v=String(document.getElementById(id).value||'').replace(',','.');return Math.round(Number(v)*100);};
+  var c=function(id){return _centavos(document.getElementById(id).value);};
   try{await _pbV().send('/api/fluxgk/admin/precos/'+p,{method:'PUT',body:{mensalCentavos:c('pr-m-'+p),anualCentavos:c('pr-a-'+p)}});
     showToast(TX('assin.priceSaved'));await carregarPlano();
   }catch(e){showToast((e&&e.message)||TX('plano.errGeneric'),4000);}
